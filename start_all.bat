@@ -78,6 +78,11 @@ echo       waiting for tunnel (may take 2-3 min on first auth) ...
 timeout /t 20 /nobreak >nul
 
 :startback
+rem 后端连哪个算法层：GPU 模式走隧道 18010，本地模式直连 8000。
+rem 用环境变量覆盖（Spring Boot 松散绑定 APP_ALGO_BASEURL → app.algo.base-url），
+rem 这样两种模式都不用手改 application.yml。
+set "APP_ALGO_BASEURL=http://127.0.0.1:18010"
+if "%GPU_MODE%"=="0" set "APP_ALGO_BASEURL=http://127.0.0.1:8000"
 start "CTD-Backend-8080" /d "%BACK_DIR%" cmd /k "mvn -DskipTests spring-boot:run -Dspring-boot.run.arguments=--server.port=8080"
 timeout /t 3 /nobreak >nul
 start "CTD-Frontend-5173" /d "%FRONT_DIR%" cmd /k "npm run dev"

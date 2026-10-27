@@ -68,6 +68,14 @@ fi
 
 # ------------------------------------------------------------------- backend
 echo "[2/3] backend ..."
+# 后端连哪个算法层：GPU 模式走隧道 18010，本地模式直连 8000。
+# 用环境变量覆盖（Spring Boot 松散绑定 APP_ALGO_BASEURL → app.algo.base-url），
+# 两种模式都不用手改 application.yml。
+if [ "$GPU_MODE" = "1" ]; then
+  export APP_ALGO_BASEURL="http://127.0.0.1:18010"
+else
+  export APP_ALGO_BASEURL="http://127.0.0.1:8000"
+fi
 ( cd "$BACK_DIR" && exec mvn -DskipTests spring-boot:run -Dspring-boot.run.arguments=--server.port=8080 ) &
 PIDS+=($!)
 sleep 3

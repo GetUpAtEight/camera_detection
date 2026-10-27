@@ -180,7 +180,14 @@ start_all.bat          # 不带 --gpu
 ./start_all.sh         # 不带 --gpu
 ```
 
-本地模式下算法层监听 `127.0.0.1:8000`。YOLO 需要 `yolo26n.pt`（未提供，缺失时自动跳过）。
+本地模式下算法层监听 `127.0.0.1:8000`，启动脚本会自动把后端指向它（无需改配置）。
+
+**不需要 GPU，也不需要 YOLO**：
+
+- `requirements.txt` 里**不含** `ultralytics` / `torch`，安装只有几十 MB；
+- 没有 `yolo26n.pt` 时 YOLO 自动关闭，9 个经典算法与低频巡检**全部可用**；
+- 需要 YOLO 归因时，取消 `requirements.txt` 里那两行注释、装好 `torch`，
+  再把 `yolo26n.pt` 放到 `algo/`（或根目录）即可。
 
 ### 手动启动（不用一键脚本）
 
@@ -201,9 +208,9 @@ npm install
 npm run dev
 ```
 
-> 后端默认连 `http://127.0.0.1:18010`（隧道模式）。纯本地模式需要把
-> `backend/src/main/resources/application.yml` 里的 `app.algo.base-url`
-> 改成 `http://127.0.0.1:8000`。
+> 两种模式的差别只有一个：后端要连哪个算法层地址。
+> 启动脚本会自动设置（`APP_ALGO_BASEURL` 环境变量，透传到 `app.algo.base-url`），
+> **不需要手改 `application.yml`**。手动启动时才需要自己设这个变量。
 
 ---
 
