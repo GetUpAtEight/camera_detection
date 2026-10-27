@@ -61,3 +61,13 @@ _inspect.py
 _rebuild.py
 _restart.py
 _rmbak.py
+_loadtest*.py
+_probe*.py
+_caps.py
+
+# 早期「实时监控」版本的联调/调参残留（已从版本库移除，仅保留工作区文件）
+deploy/live_sim.py
+deploy/live_calib_test.py
+deploy/live_shot.js
+deploy/live_calib_result*.json
+deploy/cache_test.sh
