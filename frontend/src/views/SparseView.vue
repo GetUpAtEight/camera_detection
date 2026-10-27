@@ -1342,8 +1342,21 @@ async function runDemo() {
       baseCanvas = canvas
     }
     if (!baseCanvas) {
-      ElMessage.warning('请先打开摄像头 / 选视频 / 选图片，演示需要一张底图')
-      return
+      // 兜底：没有摄像头/视频/上传图片时，用内置样图。
+      // 这样"只想看低频巡检效果"的人零准备就能点一键演示。
+      try {
+        const res = await fetch('/demo/reference_normal.jpg')
+        if (!res.ok) throw new Error('样图加载失败')
+        const bmp = await createImageBitmap(await res.blob())
+        const canvas = document.createElement('canvas')
+        canvas.width = 960
+        canvas.height = Math.round((bmp.height / bmp.width) * 960)
+        canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height)
+        baseCanvas = canvas
+      } catch {
+        ElMessage.warning('请先打开摄像头 / 选视频 / 选图片，演示需要一张底图')
+        return
+      }
     }
 
     // 1~2：正常两次（建立基线）

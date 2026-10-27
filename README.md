@@ -135,7 +135,36 @@ camera-tamper-demo/
 
 端口占用：算法层 `8000`（本地）或 `18010`（隧道）、后端 `8080`、前端 `5173`。
 
-### 方式 A：GPU 服务器模式（推荐，完整功能）
+### 方式 A：纯本地模式（推荐 —— 只演示低频巡检时足够用）
+
+低频巡检是**纯 CPU 算法**，与 GPU、YOLO、实时检测完全无关；这条路径**不需要登录服务器**。
+
+```bash
+cd algo
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt      # Windows
+# .venv/bin/pip install -r requirements.txt        # Linux / macOS
+cd ..
+start_all.bat          # Windows，不带 --gpu
+./start_all.sh         # Linux / macOS，不带 --gpu
+```
+
+启动后 → 打开 http://localhost:5173 → 左侧「**低频巡检**」→ 填机位 id（如 `cam-01`）
+→ 点右上「**一键演示（6 次采样）**」，30 秒跑完 正常 → 遮挡 → 失焦 → 重放。
+
+> **演示不需要摄像头，也不需要准备图片**：没有底图时会自动使用内置样图
+> （`frontend/public/demo/reference_normal.jpg`）。
+
+**为什么不需要 GPU / YOLO**：
+
+- `requirements.txt` **不含** `ultralytics` / `torch`，安装只有几十 MB；
+- 没有 `yolo26n.pt` 时 YOLO 自动关闭，**低频巡检与 9 个经典算法全部可用**；
+- 需要 YOLO 归因时，取消 `requirements.txt` 那两行注释、装好 `torch`，
+  再把 `yolo26n.pt` 放到 `algo/` 即可。
+
+本地模式下算法层监听 `127.0.0.1:8000`，启动脚本会自动把后端指向它（无需改配置）。
+
+### 方式 B：GPU 服务器模式（需要 YOLO / 完整功能时）
 
 算法层跑在服务器上，本地通过 SSH 隧道访问。
 
@@ -167,27 +196,6 @@ start_all.bat --gpu        # Windows
 > `--gpu` 会**把 `algo/` 打包上传到服务器并重启远端服务**，因此需要对
 > `CTD_REMOTE_ROOT`（默认 `/root/yzn_model_api`）有写权限。
 > 只想连已经在跑的服务时，可以只起隧道：`python deploy/remote.py --tunnel`。
-
-### 方式 B：纯本地模式（不需要 GPU）
-
-```bash
-cd algo
-python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt      # Windows
-# .venv/bin/pip install -r requirements.txt        # Linux / macOS
-cd ..
-start_all.bat          # 不带 --gpu
-./start_all.sh         # 不带 --gpu
-```
-
-本地模式下算法层监听 `127.0.0.1:8000`，启动脚本会自动把后端指向它（无需改配置）。
-
-**不需要 GPU，也不需要 YOLO**：
-
-- `requirements.txt` 里**不含** `ultralytics` / `torch`，安装只有几十 MB；
-- 没有 `yolo26n.pt` 时 YOLO 自动关闭，9 个经典算法与低频巡检**全部可用**；
-- 需要 YOLO 归因时，取消 `requirements.txt` 里那两行注释、装好 `torch`，
-  再把 `yolo26n.pt` 放到 `algo/`（或根目录）即可。
 
 ### 手动启动（不用一键脚本）
 
