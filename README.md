@@ -369,6 +369,25 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 `8000 / 8080 / 5173 / 18010` 任一被占都会起不来，
 用 `netstat -ano | findstr :8080`（Windows）或 `lsof -i:8080` 排查。
 
+**5.1 后端报 "Port 8080 was already in use"，但 netstat 看不到任何进程（Windows）**
+这是 Windows 的**端口保留**（Hyper-V/WSL 预留端口段），绑定会直接报 `WinError 10013`。
+两种解法：
+
+```powershell
+# 解法一：换个端口，并让前端代理指过去（推荐，不需要管理员）
+mvn -DskipTests spring-boot:run -Dspring-boot.run.arguments=--server.port=8090
+$env:VITE_API_TARGET="http://127.0.0.1:8090"; npm run dev   # 在 frontend 目录
+```
+
+```powershell
+# 解法二：临时释放保留端口（需要管理员）
+net stop winnat
+# 此时启动后端，成功后再执行：
+net start winnat
+```
+
+查保留段：`netsh interface ipv4 show excludedportrange protocol=tcp`
+
 **6. 一直显示"基线建立中"**
 正常。同一时段槽需要 3 个样本（= 3 天）才算就绪，期间只记录、不下结论。
 
