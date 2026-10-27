@@ -1,5 +1,11 @@
 # 摄像头篡改检测 · 低频巡检
 
+> [!WARNING]
+> **默认无鉴权：不配置 `APP_AUTH_TOKEN` 时，后端对 `/api/**` 一律放行（fail-open），
+> 启动日志会打印告警。此时任何能访问到 8080 的人都能删除机位、清空基线、改参照物。
+> 部署到公网、或任何非受信网络之前，必须配置 `APP_AUTH_TOKEN`。**
+> 详见 [docs/DEPLOY.md §5 鉴权配置](docs/DEPLOY.md)。
+
 面向监控摄像头的**低频巡检**篡改检测：不实时拉流，每 1 小时（可配到 1 天）拉一次帧、
 每次连拉 3 帧，用「与历史基线的偏离 × 微时序动态」判断画面是否被篡改。
 
@@ -102,7 +108,7 @@ camera-tamper-demo/
 │   │   └── engine.py            #   判定流程与结果组装
 │   ├── media.py                 # 图片解码
 │   ├── requirements.txt
-│   └── tests/test_sparse.py     # 59 项算法自测
+│   └── tests/test_sparse.py     # 算法行为回归自测（用例数随代码演进）
 ├── backend/                     # SpringBoot 3（透传层）
 │   └── src/main/java/com/demo/tamper/
 │       ├── controller/SparseController.java
@@ -131,6 +137,23 @@ camera-tamper-demo/
 
 端口：算法层 `8000`（本地）或 `18010`（隧道）、后端 `8080`、前端 `5173`。
 
+### ⚠️ 首次克隆请先读这一段
+
+从 git 拉下来后，**有四件事会让人卡住**，都不是 bug：
+
+| 坑 | 现象 | 解决 |
+|---|---|---|
+| **JDK 版本** | `mvn` 报 `release 17 not supported` | 本机若默认 JDK 11，先设 `JAVA_HOME` 指向 JDK 17 |
+| **前端依赖** | `npm run test` 报找不到 vitest | 必须先 `cd frontend && npm install` |
+| **Python 编码** | 跑测试时报 `UnicodeEncodeError: gbk` | 设 `PYTHONIOENCODING=utf-8` |
+| **鉴权默认关闭** | 不配 token 也能访问，以为漏了校验 | 这是**故意的** fail-open，见下方「鉴权」一节 |
+
+```powershell
+# Windows 示例：JDK 版本 + Python 编码
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+$env:PYTHONIOENCODING = "utf-8"
+```
+
 ### 本地跑（推荐，零依赖服务器）
 
 ```bash
@@ -146,23 +169,81 @@ start_all.bat          # Windows
 
 打开 http://localhost:5173 即可。**不需要 GPU、不需要 YOLO、不需要服务器**。
 
+### 鉴权（默认关闭，部署公网前必须打开）
+
+后端的 `/api/**` 支持令牌校验，由 `app.auth.token` 控制：
+
+- **不配置 = 放行**（fail-open），启动日志会打一条 WARN。这是为了让 demo 开箱即用，**不是遗漏**。
+- 配置后（环境变量 `APP_AUTH_TOKEN` 或 `application.yml` 的 `app.auth.token`），请求需带
+  `Authorization: Bearer <token>`（主用）或 `X-API-Token: <token>`（别名）。
+- 校验失败返回 `401`，响应体沿用 `ApiResponse` 结构。
+
+> **部署到公网前必须配置 `APP_AUTH_TOKEN`，并让算法层只监听 `127.0.0.1`。**
+> 详见 `docs/DEPLOY.md` §5。
+
+### 跑测试
+
+> 三端测试都需要先完成依赖安装（`pip install -r requirements.txt` / `npm install`）。
+> Windows 下**必须设 `PYTHONIOENCODING=utf-8`**，否则算法层测试会在输出
+> `⇒` 字符时抛 `UnicodeEncodeError: gbk`。
+
+```powershell
+$env:JAVA_HOME       = "C:\Program Files\Java\jdk-17"
+$env:PYTHONIOENCODING = "utf-8"
+
+# 算法层 —— 59 项断言，确定性合成画面，可复现
+cd algo
+.venv\Scripts\python.exe tests\test_sparse.py
+
+# 后端 —— 45 项断言：鉴权 / 租户 / URI 编码 / 错误映射
+cd backend
+mvn test
+
+# 前端 —— Vitest
+cd frontend
+npm install
+npm run test
+```
+
+期望结果：算法层 `全部通过`、后端 `Tests run: 45, Failures: 0, Errors: 0`、
+前端 `Tests ... passed`。**任何一项有失败都不要提交**，测试是行为契约。
+
 > 演示不需要摄像头，也不需要准备图片：点「一键演示」时会自动使用内置样图
 > （`frontend/public/demo/reference_normal.jpg`）。
 
 ### 手动启动（三条命令，推荐用于排查）
 
-```bash
-# ① 算法层
+> ⚠️ **PowerShell 用户请注意**：`-D` 开头的 Maven 属性必须**整体加双引号**，
+> 否则 PowerShell 会在 `.` 处拆参，报 `Unknown lifecycle phase`。
+> 下面的写法已经加好引号，直接复制即可。
+
+```powershell
+# 前置：JDK 版本（不设会用系统默认，很可能是 JDK 11 而编译失败）
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+
+# ① 算法层（先起，后端依赖它）
 cd algo
+$env:PYTHONIOENCODING = "utf-8"
 .venv\Scripts\python.exe server.py --host 127.0.0.1 --port 8000
 
-# ② 后端
+# ② 后端（新开一个终端）
 cd backend
-mvn -DskipTests spring-boot:run -Dspring-boot.run.arguments=--server.port=8080
+mvn -DskipTests spring-boot:run "-Dspring-boot.run.arguments=--server.port=8080"
 
-# ③ 前端
+# ③ 前端（新开一个终端）
 cd frontend
 npm install
+npm run dev
+```
+
+**端口被占用怎么办？** 后端换端口，前端通过 `VITE_API_TARGET` 跟着改：
+
+```powershell
+# 后端改用 8081
+mvn -DskipTests spring-boot:run "-Dspring-boot.run.arguments=--server.port=8081"
+
+# 前端指向 8081
+$env:VITE_API_TARGET = "http://127.0.0.1:8081"
 npm run dev
 ```
 
@@ -327,20 +408,35 @@ dBurst = burst 内的微时序动态
 
 完整字段语义见 [docs/API.md](docs/API.md)。
 
+**公共约定**
+
+| 约定 | 说明 |
+|---|---|
+| 鉴权 | 配了 `APP_AUTH_TOKEN` 时，请求需带令牌；**未配置时放行并打告警**（fail-open） |
+| 租户 | 请求头 `X-Tenant-Id`，缺省 `default`；后端拼成 `{tenant}:{cameraId}` 再调算法层 |
+| 服务端时间 | 响应头 `X-Server-Now`（毫秒时间戳），前端在缺 `tsMs` 时用它兜底 |
+
+字段与取值细节（含鉴权失败的状态码）见 [docs/API.md](docs/API.md)。
+
 ---
 
 ## 自测
 
-```bash
+```powershell
 cd algo
-.venv\Scripts\python tests\test_sparse.py     # 59 项断言
+$env:PYTHONIOENCODING='utf-8'; .\.venv\Scripts\python.exe tests\test_sparse.py
 ```
+
+> Windows 控制台默认 GBK，脚本里的中文断言信息会触发 `UnicodeEncodeError`，
+> 所以必须先设 `PYTHONIOENCODING=utf-8`（Linux / macOS 一般不需要）。
 
 覆盖：基线累积 / 遮挡 / 失焦 / 跨采样点重放 / 合规静态不误报 / 正在转动 /
 瞬时事件 / 曝光不稳 / 持久化 / 时段槽 / 移位 / 纸遮挡 / 光照变化 / 部分遮挡 /
 模板库 / 质量闸 / 去重审计。
 
-预期：`通过 59 / 59 全部通过`。
+预期：末尾汇总行显示 `失败 0`（形如 `通过 N / N 全部通过`）。
+总用例数会随代码演进增加，**不要把它当成固定契约**；作为行为契约的是「零失败」——
+改动的判据如果推翻了既有行为，测试必须先失败、再讨论该不该改。
 
 ---
 
@@ -355,12 +451,30 @@ Windows 上常见 `WinError 10013`（端口保留）或别的服务占用。
 换端口启动并用环境变量告诉前端：
 
 ```powershell
-mvn -DskipTests spring-boot:run -Dspring-boot.run.arguments=--server.port=8090
+cd backend
+mvn -DskipTests spring-boot:run "-Dspring-boot.run.arguments=--server.port=8090"
+
+# 另开终端
+cd frontend
 $env:VITE_API_TARGET="http://127.0.0.1:8090"; npm run dev
 ```
 
 **3. `pip install` 慢或被墙**
-换镜像：`-i https://mirrors.aliyun.com/pypi/simple`（实测清华的 wheel 下载可能 403）。
+启动脚本已经默认走阿里云镜像，首次建 `.venv` 时会打印 `pip index: …`。
+要换成别的源或回退官方源：
+
+```bash
+PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./start_all.sh   # 指定源
+PIP_INDEX_URL=https://pypi.org/simple ./start_all.sh                    # 官方源
+CTD_PIP_OFFICIAL=1 ./start_all.sh                                       # 同上，一键回退
+```
+
+```bat
+set PIP_INDEX_URL=https://pypi.org/simple
+start_all.bat
+```
+
+手动安装时同样可用：`pip install -i <源> -r requirements.txt`（实测清华的 wheel 下载可能 403）。
 
 **4. 一直「基线建立中」**
 正常。同一时段槽要攒 3 个样本（= 3 天）才算就绪；期间只记录、不下结论。
@@ -379,7 +493,9 @@ $env:VITE_API_TARGET="http://127.0.0.1:8090"; npm run dev
 | 冷启动约 3 天 | 同一时段需 3 个样本 |
 | 缓慢攻击可能被学进基线 | 每天变化都在阈值以下时会随基线漂移 |
 | 假定固定机位 | 手持/云台场景不适用参照物方案 |
-| 演示级并发 | 无多租户、无鉴权（部署到公网前必须自行加） |
+| 鉴权默认关闭 | 不配 `APP_AUTH_TOKEN` 时 fail-open（放行 + 启动告警），见顶部风险声明 |
+| 租户隔离是逻辑隔离 | `X-Tenant-Id` 只做 `{tenant}:{cameraId}` 前缀隔离，不是安全边界；真正的边界是 `APP_AUTH_TOKEN` |
+| 演示级并发 | 单进程单 worker，基线按机位落盘；机位数上千后的瓶颈与演进见 [docs/DEPLOY.md](docs/DEPLOY.md) |
 | 不做 AIGC 画面检测 | 现有检测器在该场景不可靠，不作承诺 |
 
 ---

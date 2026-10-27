@@ -30,7 +30,12 @@ ANALYZE_LONG_SIDE = 640
 _NOISE_KERNEL = 3
 
 # ORB 平移估计：特征点少一点，够估几像素的平移就行，不要让它抢 CPU。
+# 约束：模块级单例，只在单 worker 内复用；多线程共享须改为线程局部实例（ORB 实例非线程安全）。
 _ORB = cv2.ORB_create(nfeatures=400, fastThreshold=12)
+
+# RANSAC 全局随机种子：cv2 5.0.0 的 estimateAffinePartial2D 没有 rng 参数，
+# 只能通过默认 RNG 的种子让内点抽样的序列固定下来，保证同一输入得到同一变换。
+_RANSAC_SEED = 12345
 
 
 # --------------------------------------------------------------------------- 预处理
@@ -526,6 +531,8 @@ def orb_translation(gray_a: np.ndarray, gray_b: np.ndarray) -> Dict[str, Any]:
                 "matches": len(good), "ok": False}
     src = np.float32([kp_a[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
     dst = np.float32([kp_b[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+    # 固定 RNG 种子：边界场景下 RANSAC 的抽样顺序会影响选出的模型，种子固定后同一输入可复现
+    cv2.setRNGSeed(_RANSAC_SEED)
     matrix, inliers = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC,
                                                   ransacReprojThreshold=3.0)
     if matrix is None or inliers is None:
@@ -597,6 +604,8 @@ def orb_affine(ref_gray: np.ndarray, cur_gray: np.ndarray) -> Dict[str, Any]:
                 "reason": "匹配点不足", "inlierRatio": 0.0}
     src = np.float32([kp_b[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
     dst = np.float32([kp_a[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+    # 同上：固定 RANSAC 随机种子，保证同一输入得到同一相似变换
+    cv2.setRNGSeed(_RANSAC_SEED)
     matrix, inliers = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC,
                                                   ransacReprojThreshold=3.0)
     if matrix is None or inliers is None:

@@ -20,6 +20,8 @@
     <properties>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- 父 POM 缺省 3.2.5 在离线环境不可解析；本机仓库已有 3.5.4 全套 -->
+        <surefire.version>3.5.4</surefire.version>
     </properties>
 
     <dependencies>

@@ -441,8 +441,12 @@ class CameraStore:
 
     @staticmethod
     def _safe_id(camera_id: str) -> str:
-        cleaned = "".join(ch for ch in str(camera_id) if ch.isalnum() or ch in "-_")
-        return cleaned or uuid.uuid4().hex[:12]
+        # ':' 是后端注入的租户分隔符（{tenant}:{cameraId}），必须保留：
+        # 若滤掉它，"myc0:cam" 与 "myc:0cam" 会塌成同一个文件名而静默串租。
+        # 含 ':' 的 id 换成 '__' 落盘（':' 在 Windows 上非法、且会被误当日志驱动器）。
+        # 替换是单射（'__' 不可能出现在清洗后的字符集里），故不会引入新的碰撞。
+        cleaned = "".join(ch for ch in str(camera_id) if ch.isalnum() or ch in "-_:")
+        return cleaned.replace(":", "__") or uuid.uuid4().hex[:12]
 
     # ------------------------------------------------------------------ 读
     def get(self, camera_id: str) -> CameraState:
@@ -519,6 +523,10 @@ class CameraStore:
                 tmp_npz = self._npz_path(safe) + ".tmp.npz"
                 np.savez_compressed(tmp_npz, **arrays)
                 os.replace(tmp_npz, self._npz_path(safe))
+            else:
+                # 没有可写的数组时 NPZ 不会被重建，旧文件的缩略图/参照帧会残留在磁盘上，
+                # 下次 get() 时被 _restore_thumbs 读回已不存在的样本 —— 状态与磁盘不一致。
+                self._drop_npz(safe)
 
             self._index[safe] = {
                 "cameraId": safe,
@@ -530,6 +538,15 @@ class CameraStore:
             }
             self._save_index()
             self._cache[safe] = state
+
+    def _drop_npz(self, safe: str) -> None:
+        """删除机位的 NPZ 二进制（缩略图 / 参照物模板 / 基线参考帧），忽略不存在的文件。"""
+        path = self._npz_path(safe)
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except OSError:
+            pass
 
     # ------------------------------------------------------------------ 管理
     def list_cameras(self) -> List[Dict[str, Any]]:
@@ -574,5 +591,9 @@ class CameraStore:
                 state.name = old.name
                 state.landmarks = [dict(item) for item in old.landmarks]
                 state.landmark_patches = dict(old.landmark_patches)
+            # 先清掉旧 NPZ：新状态若一个数组都没有（例如参照物未标定），save() 不会重建 NPZ，
+            # 旧文件里的缩略图与基线参考帧就会残留下来被下次加载读回去。
+            self._drop_npz(safe)
+            self._cache.pop(safe, None)
             self.save(state)
             return state

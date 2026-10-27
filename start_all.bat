@@ -9,6 +9,16 @@ rem    backend  SpringBoot  http://127.0.0.1:8080
 rem    frontend Vite dev    http://127.0.0.1:5173
 rem  Usage: double click, or:  start_all.bat [--gpu]
 rem         --gpu  登录 GPU 服务器、部署算法层并常驻隧道（要求后端 base-url 指向 18010）
+rem
+rem  日志：三个服务各开一个独立窗口（CTD-Algo-8000 / CTD-Backend-8080 /
+rem        CTD-Frontend-5173），日志即窗口输出；关窗口即停该服务。
+rem  PyPI 源（首次创建 .venv 时生效，遵循 pip 官方变量语义）：
+rem    PIP_INDEX_URL     包索引地址，默认国内镜像 mirrors.aliyun.com
+rem    PIP_TRUSTED_HOST  额外受信主机，默认 mirrors.aliyun.com
+rem    PIP_INSTALL_ARGS  追加给 pip install 的额外参数
+rem  回退官方源（任选其一）：
+rem    set PIP_INDEX_URL=https://pypi.org/simple   再运行本脚本
+rem    set CTD_PIP_OFFICIAL=1                      再运行本脚本
 rem ============================================================
 
 cd /d "%~dp0"
@@ -19,6 +29,21 @@ set "GPU_MODE=0"
 if /I "%~1"=="--gpu" set "GPU_MODE=1"
 if /I "%~1"=="--remote" set "GPU_MODE=1"
 
+rem ---------- pip 镜像配置：未显式设置时不覆盖，一键可回退官方源 ----------
+if not defined CTD_PIP_OFFICIAL goto :pip_mirror
+if /I "%CTD_PIP_OFFICIAL%"=="1" goto :pip_official
+
+:pip_mirror
+if not defined PIP_INDEX_URL set "PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple"
+if not defined PIP_TRUSTED_HOST set "PIP_TRUSTED_HOST=mirrors.aliyun.com"
+goto :pip_ready
+
+:pip_official
+set "PIP_INDEX_URL=https://pypi.org/simple"
+set "PIP_TRUSTED_HOST="
+
+:pip_ready
+
 echo [1/3] algo layer ...
 if not exist "%ALGO_DIR%\.venv\Scripts\python.exe" goto :mkvenv
 goto :checkfront
@@ -27,7 +52,8 @@ goto :checkfront
 echo       creating .venv and installing requirements ...
 python -m venv "%ALGO_DIR%\.venv"
 if errorlevel 1 goto :fail
-"%ALGO_DIR%\.venv\Scripts\python.exe" -m pip install -q -i https://pypi.org/simple -r "%ALGO_DIR%\requirements.txt"
+echo       pip index: %PIP_INDEX_URL%
+"%ALGO_DIR%\.venv\Scripts\python.exe" -m pip install -q %PIP_INSTALL_ARGS% -r "%ALGO_DIR%\requirements.txt"
 if errorlevel 1 goto :fail
 
 :checkfront

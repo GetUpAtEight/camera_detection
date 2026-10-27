@@ -1,7 +1,9 @@
 package com.demo.tamper.config;
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
@@ -20,5 +22,20 @@ public class AppConfig {
         factory.setReadTimeout((int) properties.getAlgo().getReadTimeoutMs());
         factory.setBufferRequestBody(false);
         return new RestTemplate(factory);
+    }
+
+    /**
+     * {@code X-Server-Now} 回填。
+     *
+     * <p>注册成最外层过滤器（最高优先级），这样错误分派、CORS 预检、拦截器
+     * 直接写出的 401/400 响应也都能带上这个头。
+     */
+    @Bean
+    public FilterRegistrationBean<ServerTimeFilter> serverTimeFilter() {
+        FilterRegistrationBean<ServerTimeFilter> registration =
+                new FilterRegistrationBean<>(new ServerTimeFilter());
+        registration.addUrlPatterns("/*");
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registration;
     }
 }

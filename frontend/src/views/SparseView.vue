@@ -447,122 +447,36 @@
     </el-row>
 
     <!-- ============================ 参照物标定对话框 ============================ -->
-    <el-dialog v-model="lmDialog" title="标定参照物（静止结构）" width="920px" destroy-on-close>
-      <div class="lm-tip">
-        在画面上框选<strong>不会自己移动</strong>的人造结构：大门、楼角、围墙、灯杆基座。
-        不要选树叶、旗帜、水面、广告布（会被风吹动），也不要选车辆/行人（会移动）。
-        建议标 2~4 个，分布在不同位置。
-        判据是"多个参照物是否<strong>一致整体位移</strong>"——只有 1 个动了，说明是那个位置上的东西变了，不是机位变了。
-      </div>
-      <div class="lm-toolbar">
-        <el-radio-group v-model="lmMode" size="small">
-          <el-radio-button value="landmark">参照物（判机位移动）</el-radio-button>
-          <el-radio-button value="ignore">忽略区（不判变化）</el-radio-button>
-        </el-radio-group>
-        <el-button size="small" type="primary" plain @click="captureForLandmark">取当前画面</el-button>
-        <el-button size="small" :disabled="!lmRects.length" @click="lmRects.pop()">撤销上一个</el-button>
-        <el-button size="small" type="danger" plain :disabled="!lmRects.length" @click="lmRects = []">
-          清空列表
-        </el-button>
-      </div>
-      <div class="hint" style="margin-bottom: 8px">
-        当前模式：<b>{{ lmMode === 'landmark' ? '参照物' : '忽略区' }}</b> —
-        {{
-          lmMode === 'landmark'
-            ? '选不会自己动的结构（大门/楼角/围墙），用来判断机位有没有被转动'
-            : '选会被频繁挪动的区域（桌面/货架/堆放点），这些像素不参与基线偏离统计'
-        }}
-      </div>
-
-      <div class="lm-stage" v-if="lmImageUrl">
-        <img ref="lmImgEl" :src="lmImageUrl" class="lm-img" @load="onLmImageLoad" alt="calibration" />
-        <div
-          class="lm-layer"
-          @mousedown="onLmDown"
-          @mousemove="onLmMove"
-          @mouseup="onLmUp"
-          @mouseleave="onLmUp"
-        >
-          <div
-            v-for="(r, i) in lmRects"
-            :key="'r' + i"
-            class="lm-box"
-            :class="{ ignore: r.kind === 'ignore' }"
-            :style="rectStyle(r)"
-          >
-            <span class="lm-box-label" :class="{ ignore: r.kind === 'ignore' }">{{ r.label }}</span>
-          </div>
-          <div
-            v-if="lmDrawing"
-            class="lm-box drawing"
-            :class="{ ignore: lmMode === 'ignore' }"
-            :style="rectStyle(lmDraft)"
-          ></div>
-        </div>
-      </div>
-      <el-empty v-else description="点「取当前画面」取一张底图" :image-size="70" />
-
-      <div class="lm-list" v-if="lmRects.length">
-        <div v-for="(r, i) in lmRects" :key="'li' + i" class="lm-item">
-          <el-tag size="small" :type="r.kind === 'ignore' ? 'info' : 'success'">
-            {{ r.kind === 'ignore' ? '忽略区' : '参照物' }}
-          </el-tag>
-          <span class="hint">
-            {{ r.label }} · x {{ pct(r.x) }} · y {{ pct(r.y) }} · w {{ pct(r.w) }} · h {{ pct(r.h) }}
-          </span>
-          <el-button size="small" text type="danger" @click="lmRects.splice(i, 1)">删除</el-button>
-        </div>
-      </div>
-
-      <div class="lm-admit">
-        <el-checkbox v-model="lmAdmitFrame">把这张画面同时加入历史基线</el-checkbox>
-        <span class="hint">
-          标定画面通常就是"正常画面"，直接入库能少等一次抽样；但若被遮挡、失焦或与已有基线差异过大，会自动跳过
-        </span>
-      </div>
-
-      <div class="lm-tpl" v-if="anchorRects.length">
-        <div class="lm-tpl-title">
-          参照物模板库
-          <span class="hint">
-            同一个参照物可保存多套外观模板（夜间/雨天/换季）。匹配时取最高分 ——
-            这样天气变化不会再被误判成"参照物丢失"。上限 8 套/参照物。
-          </span>
-        </div>
-        <div v-for="a in anchorRects" :key="'tpl' + a.idx" class="lm-tpl-row">
-          <span class="lm-tpl-name">{{ a.label }}</span>
-          <el-tag size="small" effect="plain">{{ countFor(a.idx) }} 套</el-tag>
-          <el-input
-            v-model="tplLabel[a.idx]"
-            size="small"
-            placeholder="模板名称，如 夜间版"
-            style="width: 150px"
-          />
-          <el-button size="small" :disabled="!lmBlob" @click="addTemplateFor(a.idx)">
-            用当前画面补录
-          </el-button>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="lmDialog = false">取消</el-button>
-        <el-button
-          size="default"
-          @click="clearLandmarkConfig"
-          :disabled="!activeLandmarks.length"
-        >
-          清除已有标定
-        </el-button>
-        <el-button
-          type="primary"
-          :loading="lmSaving"
-          :disabled="!lmRects.length || !lmBlob"
-          @click="saveLandmarks"
-        >
-          保存标定（{{ lmRects.length }} 个）
-        </el-button>
-      </template>
-    </el-dialog>
+    <LandmarkCalibrationDialog
+      v-model:dialog-visible="lm.dialogVisible.value"
+      :image-url="lm.imageUrl.value"
+      :image-blob="lm.imageBlob.value"
+      :mode="lm.mode.value"
+      :rects="lm.rects.value"
+      :drawing="lm.drawing.value"
+      :draft="lm.draft.value"
+      :saving="lm.saving.value"
+      :admit-frame="lm.admitFrame.value"
+      :anchors="anchorRects"
+      :tpl-labels="tplLabel"
+      :template-count="countFor"
+      :has-existing="activeLandmarks.length > 0"
+      @update:dialog-visible="lm.dialogVisible.value = $event"
+      @update:mode="lm.mode.value = $event"
+      @update:admit-frame="lm.admitFrame.value = $event"
+      @update:tpl-label="(idx: number, v: string) => (tplLabel[idx] = v)"
+      @capture="captureForLandmark"
+      @down="lm.onDown"
+      @move="lm.onMove"
+      @up="lm.onUp"
+      @undo="lm.undo"
+      @clear-rects="lm.clearRects"
+      @remove-rect="lm.removeAt"
+      @save="saveLandmarks"
+      @clear-all="clearLandmarkConfig"
+      @add-template="addTemplateFor"
+      @image-load="onLmImageLoad"
+    />
   </div>
 </template>
 
@@ -571,70 +485,58 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import * as echarts from 'echarts'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { sparseApi } from '@/api'
-
-/* ------------------------------------------------------------------ 类型 */
-interface CameraItem {
-  cameraId: string
-  name?: string
-  samples: number
-  status: string
-  updatedMs?: number
-}
-interface SlotItem {
-  slot: number
-  hour: number
-  samples: number
-  ready: boolean
-  latestTs: number
-}
-interface HistoryItem {
-  tsMs: number
-  verdict: string
-  label: string
-  alarm: boolean
-  risk: number
-  tamperType: string
-  dHist?: number
-  dBurst?: number
-  slot: number
-}
-interface SparseResult {
-  cameraId: string
-  tsMs: number
-  slot: number
-  verdict: string
-  verdictLabel: string
-  level: string
-  alarm: boolean
-  tamperType: string
-  risk: number
-  confidence: number
-  reasons: string[]
-  matrix: {
-    dHist?: number
-    dBurst?: number
-    cell?: string
-    baselineReady?: boolean
-    freezeEvidence?: { d1?: boolean; d3?: boolean; gapMs?: number }
-  }
-  layers: Record<string, any>
-  baseline: Record<string, any>
-  timingsMs?: Record<string, number>
-  keyframe?: string
-  baselineCompare?: string
-  diffHeatmap?: string
-  history?: HistoryItem[]
-  slots?: SlotItem[]
-}
+import type {
+  SparseCameraItem,
+  SparseLandmark,
+  SparseLandmarkMatch,
+  SparseMeta,
+  SparseParamMeta,
+  SparseSampleResult,
+  SparseSlot,
+  SparseState,
+  SparseTemplateItem
+} from '@/api'
+import LandmarkCalibrationDialog from '@/components/sparse/LandmarkCalibrationDialog.vue'
+import { fmt, formatTime, levelIcon, levelOf, lmOk, pct, statusText, typeText } from '@/composables/format'
+import {
+  L1_INDICATORS,
+  QUADRANT_DEFS,
+  baselineSourceText as computeBaselineSourceText,
+  buildCompareRows,
+  buildGallery,
+  isLandmarkConfigured,
+  landmarkMoved,
+  normalizeHistory,
+  nextTsText as computeNextTsText,
+  rectStyle,
+  withIdx
+} from '@/composables/sparseView'
+import type { TimelineRow } from '@/composables/sparseView'
+import {
+  captureOne,
+  captureFromCamera,
+  captureFromVideo,
+  dataUrlToBlob,
+  demoBaseCanvas,
+  synthFrames
+} from '@/composables/capture'
+import { buildMatrixOption, thresholdsFromParams } from '@/composables/matrixChart'
+import {
+  REPLAY_JUMP_MS,
+  jumpForward,
+  nextSampleTs,
+  shouldResetAfterSubmit
+} from '@/composables/sampleClock'
+import { useLandmarkCalibration } from '@/composables/useLandmarkCalibration'
 
 /* ------------------------------------------------------------------ 状态 */
-const cameras = ref<CameraItem[]>([])
+const cameras = ref<SparseCameraItem[]>([])
 const cameraId = ref('')
 const cameraName = ref('')
-const stateData = ref<any>(null)
-const result = ref<SparseResult | null>(null)
-const history = ref<HistoryItem[]>([])
-const meta = ref<any>(null)
+const stateData = ref<SparseState | null>(null)
+const result = ref<SparseSampleResult | null>(null)
+const history = ref<TimelineRow[]>([])
+const meta = ref<SparseMeta | null>(null)
 const params = reactive<Record<string, number>>({})
 const loading = ref(false)
 const demoRunning = ref(false)
@@ -656,110 +558,56 @@ let stream: MediaStream | null = null
 let matrixChart: echarts.ECharts | null = null
 
 /* ------------------------------------------------------------------ 常量 */
-const quadrantDefs = [
-  { key: 'Q1', label: '正常活动场景', desc: '有结构变化 + 有独立噪声', danger: false },
-  { key: 'Q2', label: '合规静态（不判）', desc: '静止 + 有独立噪声', danger: false },
-  { key: 'Q3', label: '冻结 / 重放', desc: '静止 + 无独立噪声', danger: true },
-  { key: 'Q4', label: '可疑合成', desc: '有动态 + 无独立噪声', danger: true }
-]
+const quadrants = QUADRANT_DEFS
+const l1Indicators = L1_INDICATORS
 
-const paramSpecs = computed<any[]>(() => meta.value?.params || [])
+/* ------------------------------------------------------------------ 模板库 */
+const templateList = ref<SparseTemplateItem[]>([])
+const tplLabel = reactive<Record<number, string>>({})
+const tplAdding = ref(false)
 
-const l1Indicators = [
-  { key: 'bitExactDup', label: 'bitExactDup', color: '#f56c6c', desc: 'burst 内逐位完全相同的帧对占比',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.bitExactDup ?? 0)) },
-  { key: 'intraMad', label: 'intraMad', color: '#409eff', desc: '相邻帧平均绝对差（去噪后）',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.intraMad ?? 0) / 0.02) },
-  { key: 'intraChangeRatio', label: 'intraChangeRatio', color: '#409eff', desc: '去噪后差异>8 的像素占比（结构性变化）',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.intraChangeRatio ?? 0) / 0.05) },
-  { key: 'intraEdgeRate', label: 'intraEdgeRate', color: '#909399', desc: '边缘图变化率',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.intraEdgeRate ?? 0) / 0.05) },
-  { key: 'intraOrbTranslation', label: 'intraOrbTranslation', color: '#e6a23c', desc: 'burst 内 ORB 平移量（px）',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.intraOrbTranslation ?? 0) / 20) },
-  { key: 'intraSharpnessVar', label: 'intraSharpnessVar', color: '#67c23a', desc: 'burst 内清晰度变异系数',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.intraSharpnessVar ?? 0) / 0.5) },
-  { key: 'sigmaPerFrame', label: 'sigmaPerFrame', color: '#f56c6c', desc: '帧间时间噪声 σ（冻结时趋 0）',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.sigmaPerFrame ?? 0) / 5) },
-  { key: 'lumaDrift', label: 'lumaDrift', color: '#b37feb', desc: 'burst 内亮度漂移',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.lumaDrift ?? 0) / 0.2) },
-  { key: 'chromaDrift', label: 'chromaDrift', color: '#b37feb', desc: 'burst 内色度漂移',
-    ratio: (r: SparseResult) => Math.min(1, (r.layers?.L1?.chromaDrift ?? 0) / 0.2) }
-] as any[]
+/* ------------------------------------------------------------------ 派生 */
+const activeLandmarks = computed<SparseLandmark[]>(() => stateData.value?.landmarks || [])
+const anchorsAll = computed(() => withIdx(activeLandmarks.value))
+const anchorRects = computed(() =>
+  anchorsAll.value.filter((lm) => (lm.kind || 'landmark') !== 'ignore')
+)
+const anchorBoxes = computed(() =>
+  activeLandmarks.value.filter((lm: SparseLandmark) => (lm.kind || 'landmark') !== 'ignore')
+)
+const ignoreBoxes = computed(() =>
+  activeLandmarks.value.filter((lm: SparseLandmark) => lm.kind === 'ignore')
+)
+const lmInfo = computed(() => result.value?.layers?.L0?.landmarks || {})
+const lmConfigured = computed<boolean>(() =>
+  isLandmarkConfigured(lmInfo.value, activeLandmarks.value)
+)
+const lmMatches = computed<SparseLandmarkMatch[]>(() => lmInfo.value.matches || [])
+const lmConsensus = computed(() => lmInfo.value.consensus || null)
 
-const compareRows = computed(() => {
-  const L0 = result.value?.layers?.L0 || {}
-  const L2 = result.value?.layers?.L2 || {}
-  const rows = [
-    { name: '清晰度 Laplacian', current: fmt(L2.sharpness), baseline: fmt(L0.baselineSharpness),
-      drop: L0.sharpnessDrop, key: 'sharpness' },
-    { name: '灰度熵 (bit)', current: fmt(L2.entropy), baseline: fmt(L0.baselineEntropy),
-      drop: L0.entropyDrop, key: 'entropy' },
-    { name: '边缘密度', current: fmt(L2.edgeDensity), baseline: fmt(L0.baselineEdge),
-      drop: L0.edgeDrop, key: 'edge' }
-  ]
-  return rows.map((r) => ({
-    name: r.name,
-    current: r.current,
-    baseline: r.baseline ?? '—',
-    change: r.drop == null ? '—' : `-${pct(r.drop)}`,
-    worse: (r.drop ?? 0) > 0.3
-  }))
+const paramSpecs = computed<SparseParamMeta[]>(() => meta.value?.params || [])
+const compareRows = computed(() => buildCompareRows(result.value))
+const baselineSourceText = computed(() => computeBaselineSourceText(result.value))
+const nextTsText = computed(() => computeNextTsText(advance.value, simulatedTs.value))
+
+function countFor(idx: number): number {
+  return templateList.value.filter((t) => Number(t.landmarkId) === idx).length
+}
+
+function lmMoved(id?: number): boolean {
+  if (id == null) return false
+  return landmarkMoved(lmMatches.value, id)
+}
+
+/* ------------------------------------------------------------------ 标定对话框 */
+const lm = useLandmarkCalibration({
+  loadImage: () => captureForLandmarkBlob(),
+  onSave: (rects, frame, admit) => saveLandmarksTo(rects, frame, admit),
+  onClear: () => clearLandmarkConfig()
 })
 
-const baselineSourceText = computed(() => {
-  const src = result.value?.layers?.L0?.scalarSource
-  if (!src) return '未建立'
-  return src === 'slot' ? '同时段槽基线' : '跨时段全局基线（降到全局）'
-})
-
-/* ------------------------------------------------------------------ 工具 */
-function pct(v: number | undefined | null): string {
-  if (v == null || !isFinite(v as number)) return '0%'
-  return `${Math.round((v as number) * 100)}%`
-}
-function fmt(v: any): string {
-  if (v == null) return '—'
-  if (typeof v !== 'number') return String(v)
-  if (Math.abs(v) >= 100) return v.toFixed(1)
-  if (Math.abs(v) >= 1) return v.toFixed(2)
-  return v.toFixed(4)
-}
-function formatTime(ts?: number): string {
-  if (!ts) return '—'
-  const d = new Date(ts)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-function statusText(status?: string): string {
-  const map: Record<string, string> = {
-    empty: '空', cold_start: '冷启动', warming: '积累中', ready: '就绪'
-  }
-  return map[status || ''] || status || '—'
-}
-function typeText(type?: string): string {
-  const map: Record<string, string> = {
-    covered: '遮挡',
-    defocused: '失焦',
-    moved: '移位',
-    frozen: '冻结 / 重放',
-    normal: '正常',
-    unknown: '未定性'
-  }
-  return map[type || ''] || type || '—'
-}
-function levelIcon(level?: string): string {
-  if (level === 'critical') return 'CircleCloseFilled'
-  if (level === 'warning') return 'WarningFilled'
-  if (level === 'ok') return 'CircleCheckFilled'
-  return 'InfoFilled'
-}
-function levelOf(verdict?: string): string {
-  if (!verdict) return 'info'
-  if (['freeze_replay', 'persistent_covered', 'persistent_defocused', 'persistent_moved',
-       'being_rotated'].includes(verdict)) return 'critical'
-  if (verdict === 'persistent_change') return 'warning'
-  if (verdict === 'normal') return 'ok'
-  return 'info'
+function onLmImageLoad() {
+  /* 图片按容器宽度自适应，overlay 用百分比定位，无需额外计算 */
 }
 
 /* ------------------------------------------------------------------ 数据加载 */
@@ -776,8 +624,8 @@ async function loadAll() {
       cameraId.value = cameras.value[0].cameraId
     }
     if (cameraId.value) await loadState()
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载失败')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '加载失败')
   } finally {
     loading.value = false
   }
@@ -787,7 +635,7 @@ async function loadState() {
   if (!cameraId.value) return
   try {
     stateData.value = await sparseApi.state(cameraId.value)
-    history.value = stateData.value?.history || []
+    history.value = normalizeHistory(stateData.value?.history)
   } catch {
     stateData.value = null
   }
@@ -811,8 +659,8 @@ async function resetBaseline() {
     result.value = null
     ElMessage.success('基线已清空')
     await loadAll()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(e?.message || '操作失败')
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(e instanceof Error ? e.message : '操作失败')
   }
 }
 
@@ -824,54 +672,25 @@ async function removeCamera() {
     cameraId.value = ''
     result.value = null
     await loadAll()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(e?.message || '操作失败')
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(e instanceof Error ? e.message : '操作失败')
   }
 }
 
-async function openSlot(slot: SlotItem) {
+async function openSlot(slot: SparseSlot) {
   gallery.value = []
   if (!slot.samples || !cameraId.value) return
-  const items: { key: string; url: string; slot: number; ts: number }[] = []
   // 该槽的样本最多 8 个，逐个拉缩略图（失败就跳过，不打断页面）
-  const slotSamples = (stateData.value?.slots || []).find((s: SlotItem) => s.slot === slot.slot)
+  const slotSamples = (stateData.value?.slots || []).find((s) => s.slot === slot.slot)
   const count = slotSamples?.samples || 0
-  for (let i = 0; i < count; i += 1) {
-    const url = sparseApi.thumbUrl(cameraId.value, slot.slot, i)
-    items.push({ key: `${slot.slot}-${i}`, url, slot: slot.slot, ts: slot.latestTs })
-  }
-  gallery.value = items
+  gallery.value = buildGallery(
+    cameraId.value,
+    { slot: slot.slot, samples: count, latestTs: slot.latestTs },
+    sparseApi.thumbUrl
+  )
 }
-
-/* ------------------------------------------------------------------ 参照物标定 */
-const lmDialog = ref(false)
-const lmImageUrl = ref('')
-const lmBlob = ref<Blob | null>(null)
-const lmMode = ref<'landmark' | 'ignore'>('landmark')
-const lmRects = ref<
-  { x: number; y: number; w: number; h: number; label: string; kind: 'landmark' | 'ignore' }[]
->([])
-const lmDrawing = ref(false)
-const lmDraft = ref({ x: 0, y: 0, w: 0, h: 0 })
-const lmStart = ref({ x: 0, y: 0 })
-const lmSaving = ref(false)
-const lmAdmitFrame = ref(true)
 
 /* ------------------------------------------------------------------ 模板库 */
-const templateList = ref<any[]>([])
-const tplLabel = reactive<Record<number, string>>({})
-const tplAdding = ref(false)
-
-const anchorRects = computed<any[]>(() =>
-  activeLandmarks.value
-    .map((lm: any, i: number) => ({ ...lm, idx: i }))
-    .filter((lm: any) => (lm.kind || 'landmark') !== 'ignore')
-)
-
-function countFor(idx: number): number {
-  return templateList.value.filter((t: any) => Number(t.landmarkId) === idx).length
-}
-
 async function loadTemplates() {
   if (!cameraId.value) return
   try {
@@ -882,17 +701,13 @@ async function loadTemplates() {
   }
 }
 
-function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  return fetch(dataUrl).then((r) => r.blob())
-}
-
 async function addTemplateFor(
   idx: number,
   blob?: Blob | null,
   label?: string,
   source = 'manual'
 ) {
-  const frame = blob || lmBlob.value
+  const frame = blob || lm.imageBlob.value
   if (!frame) {
     ElMessage.warning('没有可用画面')
     return
@@ -910,8 +725,8 @@ async function addTemplateFor(
       ElMessage.success(`已补录模板：${label || tplLabel[idx] || '附加模板'}`)
     }
     await loadTemplates()
-  } catch (e: any) {
-    const msg = e?.message || '补录失败'
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '补录失败'
     if (String(msg).includes('质量不合格')) {
       try {
         await ElMessageBox.confirm(
@@ -970,161 +785,70 @@ async function addTemplateFromResult() {
     /* 用户取消 */
   }
 }
-const lmImgEl = ref<HTMLImageElement>()
 
-const activeLandmarks = computed<any[]>(() => stateData.value?.landmarks || [])
-const anchorBoxes = computed<any[]>(() =>
-  activeLandmarks.value.filter((lm: any) => (lm.kind || 'landmark') !== 'ignore')
-)
-const ignoreBoxes = computed<any[]>(() =>
-  activeLandmarks.value.filter((lm: any) => lm.kind === 'ignore')
-)
-const lmInfo = computed<any>(() => result.value?.layers?.L0?.landmarks || {})
-const lmConfigured = computed<boolean>(() => !!lmInfo.value.configured || activeLandmarks.value.length > 0)
-const lmMatches = computed<any[]>(() => lmInfo.value.matches || [])
-const lmConsensus = computed<any>(() => lmInfo.value.consensus || null)
-
-function lmOk(m: any): boolean {
-  return !!m?.ok && (m.score ?? 0) >= (m.scoreMin ?? 0.45)
-}
-function lmMoved(id: number): boolean {
-  const m = lmMatches.value.find((x) => x.id === id)
-  return !!m && lmOk(m) && (m.magnitude ?? 0) >= 2
-}
-
-function rectStyle(r: { x: number; y: number; w: number; h: number }) {
-  return {
-    left: `${r.x * 100}%`,
-    top: `${r.y * 100}%`,
-    width: `${r.w * 100}%`,
-    height: `${r.h * 100}%`
-  }
-}
-
+/* ------------------------------------------------------------------ 参照物标定 */
 function openLandmarkDialog() {
-  lmRects.value = activeLandmarks.value.map((lm: any, i: number) => ({
-    x: lm.x, y: lm.y, w: lm.w, h: lm.h,
-    label: lm.label || `${lm.kind === 'ignore' ? '忽略区' : '参照物'}${i + 1}`,
-    kind: (lm.kind === 'ignore' ? 'ignore' : 'landmark') as 'landmark' | 'ignore'
-  }))
-  lmMode.value = 'landmark'
-  lmBlob.value = null
-  if (lmImageUrl.value) URL.revokeObjectURL(lmImageUrl.value)
-  lmImageUrl.value = ''
-  lmDialog.value = true
+  lm.open(activeLandmarks.value)
+}
+
+async function captureForLandmarkBlob(): Promise<Blob | null> {
+  return captureOne({
+    source: source.value,
+    cameraReady: cameraReady.value,
+    videoReady: videoReady.value,
+    videoEl: videoEl.value,
+    videoFileEl: videoFileEl.value,
+    pendingFiles: pendingFiles.value,
+    keyframe: result.value?.keyframe
+  })
 }
 
 async function captureForLandmark() {
   try {
-    let blob: Blob | null = null
-    if (source.value === 'camera' && cameraReady.value) {
-      blob = (await captureFromCamera(1))[0]
-    } else if (source.value === 'video' && videoReady.value) {
-      blob = (await captureFromVideo(1))[0]
-    } else if (pendingFiles.value.length) {
-      blob = pendingFiles.value[0]
-    } else if (result.value?.keyframe) {
-      // 退回：把已有证据图转成 blob
-      const resp = await fetch(result.value.keyframe)
-      blob = await resp.blob()
-    }
-    if (!blob) {
+    const ok = await lm.capture()
+    if (!ok) {
       ElMessage.warning('请先打开摄像头 / 选视频 / 选图片，再取画面')
-      return
     }
-    lmBlob.value = blob
-    if (lmImageUrl.value) URL.revokeObjectURL(lmImageUrl.value)
-    lmImageUrl.value = URL.createObjectURL(blob)
-  } catch (e: any) {
-    ElMessage.error(e?.message || '取画面失败')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '取画面失败')
   }
 }
 
-function relPos(ev: MouseEvent) {
-  const img = lmImgEl.value
-  if (!img) return { x: 0, y: 0 }
-  const rect = img.getBoundingClientRect()
-  const x = Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width))
-  const y = Math.min(1, Math.max(0, (ev.clientY - rect.top) / rect.height))
-  return { x, y }
-}
-
-function onLmImageLoad() {
-  /* 图片按容器宽度自适应，overlay 用百分比定位，无需额外计算 */
-}
-
-function onLmDown(ev: MouseEvent) {
-  if (!lmImageUrl.value) return
-  const p = relPos(ev)
-  lmStart.value = p
-  lmDraft.value = { x: p.x, y: p.y, w: 0, h: 0 }
-  lmDrawing.value = true
-}
-
-function onLmMove(ev: MouseEvent) {
-  if (!lmDrawing.value) return
-  const p = relPos(ev)
-  const x0 = Math.min(lmStart.value.x, p.x)
-  const y0 = Math.min(lmStart.value.y, p.y)
-  lmDraft.value = {
-    x: x0,
-    y: y0,
-    w: Math.abs(p.x - lmStart.value.x),
-    h: Math.abs(p.y - lmStart.value.y)
-  }
-}
-
-function onLmUp() {
-  if (!lmDrawing.value) return
-  lmDrawing.value = false
-  const d = lmDraft.value
-  if (d.w < 0.01 || d.h < 0.01) return
-  const kind = lmMode.value
-  const count = lmRects.value.filter((r) => r.kind === kind).length + 1
-  lmRects.value.push({
-    x: d.x, y: d.y, w: d.w, h: d.h,
-    kind,
-    label: `${kind === 'ignore' ? '忽略区' : '参照物'}${count}`
-  })
-  lmDraft.value = { x: 0, y: 0, w: 0, h: 0 }
-}
-
-async function saveLandmarks() {
+async function saveLandmarksTo(
+  rects: Array<{ x: number; y: number; w: number; h: number; label: string; kind: 'landmark' | 'ignore' }>,
+  frame: Blob | null,
+  admitFrame: boolean
+) {
   if (!cameraId.value) return
-  lmSaving.value = true
   try {
-    const res = await sparseApi.setLandmarks(
-      cameraId.value,
-      lmRects.value,
-      lmBlob.value,
-      false,
-      lmAdmitFrame.value
-    )
-    const anchorCount = lmRects.value.filter((r) => r.kind !== 'ignore').length
+    const res = await sparseApi.setLandmarks(cameraId.value, rects, frame, false, admitFrame)
+    const anchorCount = rects.filter((r) => r.kind !== 'ignore').length
     ElMessage.success(`已标定 ${anchorCount} 个参照物`)
     if (res?.frameAdmitted) {
       ElMessage.success(res.frameAdmitReason || '标定画面已加入基线')
     } else if (res?.frameAdmitReason) {
       ElMessage.warning(res.frameAdmitReason)
     }
-    lmDialog.value = false
+    lm.close()
     await loadState()
-  } catch (e: any) {
-    ElMessage.error(e?.message || '保存标定失败')
-  } finally {
-    lmSaving.value = false
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '保存标定失败')
   }
+}
+
+async function saveLandmarks() {
+  await lm.save()
 }
 
 async function clearLandmarkConfig() {
   try {
     await sparseApi.clearLandmarks(cameraId.value)
     ElMessage.success('已清除参照物')
-    lmRects.value = []
-    lmDialog.value = false
+    lm.rects.value = []
+    lm.close()
     await loadState()
-  } catch (e: any) {
-    ElMessage.error(e?.message || '清除失败')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '清除失败')
   }
 }
 
@@ -1137,10 +861,11 @@ async function startCamera() {
       await videoEl.value.play()
     }
     cameraReady.value = true
-  } catch (e: any) {
-    ElMessage.error('打开摄像头失败：' + (e?.message || e))
+  } catch (e) {
+    ElMessage.error('打开摄像头失败：' + (e instanceof Error ? e.message : e))
   }
 }
+
 function stopCamera() {
   stream?.getTracks().forEach((t) => t.stop())
   stream = null
@@ -1167,102 +892,11 @@ function onImageFiles(e: Event) {
   if (files.length > 5) ElMessage.warning('最多取前 5 张')
 }
 
-/* ------------------------------------------------------------------ canvas 工具 */
-function drawNoise(ctx: CanvasRenderingContext2D, w: number, h: number, sigma: number) {
-  if (sigma <= 0) return
-  const img = ctx.getImageData(0, 0, w, h)
-  const d = img.data
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * 2 * sigma
-    d[i] = Math.max(0, Math.min(255, d[i] + n))
-    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n))
-    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n))
-  }
-  ctx.putImageData(img, 0, 0)
-}
-
-function canvasToBlob(canvas: HTMLCanvasElement, quality = 0.92): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas 导出失败'))), 'image/jpeg', quality)
-  })
-}
-
-/** 从 video 元素抓一帧画到 canvas（统一到 960 宽） */
-function grabFrame(video: HTMLVideoElement): HTMLCanvasElement {
-  const vw = video.videoWidth || 1280
-  const vh = video.videoHeight || 720
-  const w = 960
-  const h = Math.round((vh / vw) * w)
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(video, 0, 0, w, h)
-  return canvas
-}
-
-/** 摄像头连拍 K 帧（帧间隔 ~600ms，模拟 0.5~2s 的 burst） */
-async function captureFromCamera(count: number): Promise<Blob[]> {
-  const video = videoEl.value
-  if (!video || !cameraReady.value) throw new Error('摄像头未就绪')
-  const blobs: Blob[] = []
-  for (let i = 0; i < count; i += 1) {
-    const canvas = grabFrame(video)
-    blobs.push(await canvasToBlob(canvas))
-    if (i < count - 1) await new Promise((r) => setTimeout(r, 600))
-  }
-  return blobs
-}
-
-/** 从视频文件的不同时间点抽 K 帧 */
-async function captureFromVideo(count: number): Promise<Blob[]> {
-  const video = videoFileEl.value
-  if (!video || !videoReady.value) throw new Error('请先选择一个视频文件')
-  if (!video.duration || isNaN(video.duration)) {
-    await new Promise<void>((resolve) => {
-      video.addEventListener('loadedmetadata', () => resolve(), { once: true })
-    })
-  }
-  const duration = video.duration || 1
-  const blobs: Blob[] = []
-  for (let i = 0; i < count; i += 1) {
-    const t = Math.min(duration * 0.95, duration * (0.1 + 0.7 * (i / Math.max(count - 1, 1))))
-    video.currentTime = t
-    await new Promise<void>((resolve) => video.addEventListener('seeked', () => resolve(), { once: true }))
-    blobs.push(await canvasToBlob(grabFrame(video)))
-  }
-  return blobs
-}
-
-/** 由一张底图合成 K 帧（每帧加独立噪声，模拟真实传感器） */
-async function synthFrames(base: HTMLCanvasElement, kind: 'normal' | 'covered' | 'defocused',
-                           count: number): Promise<Blob[]> {
-  const blobs: Blob[] = []
-  for (let i = 0; i < count; i += 1) {
-    const canvas = document.createElement('canvas')
-    canvas.width = base.width
-    canvas.height = base.height
-    const ctx = canvas.getContext('2d')!
-    if (kind === 'defocused') ctx.filter = 'blur(7px)'
-    ctx.drawImage(base, 0, 0)
-    ctx.filter = 'none'
-    if (kind === 'covered') {
-      ctx.fillStyle = 'rgb(38,40,42)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-    }
-    // 真实摄像头每帧都有独立噪声，这里必须模拟，否则会被判成"冻结重放"
-    drawNoise(ctx, canvas.width, canvas.height, kind === 'covered' ? 2.0 : 2.5)
-    blobs.push(await canvasToBlob(canvas))
-  }
-  return blobs
-}
-
 /* ------------------------------------------------------------------ 提交 */
 function nextTs(): number {
-  const step = Number(advance.value) * 3600 * 1000
-  if (!simulatedTs.value) simulatedTs.value = Date.now()
-  simulatedTs.value += step
-  return simulatedTs.value
+  const next = nextSampleTs({ simulatedTs: simulatedTs.value, advance: advance.value })
+  simulatedTs.value = next.state.simulatedTs
+  return next.tsMs
 }
 
 async function submit(frames: Blob[], label?: string, reset = false) {
@@ -1284,10 +918,8 @@ async function submit(frames: Blob[], label?: string, reset = false) {
       reset,
       { ...params }
     )
-    // 接口层给出的是宽松结构（SparseSampleResult），这里按页面自用的
-    // SparseResult 视图消费；两侧字段有交集但不等价，故先过 unknown。
-    result.value = res as unknown as SparseResult
-    if (advance.value === '0') simulatedTs.value = 0
+    result.value = res
+    if (shouldResetAfterSubmit(advance.value)) simulatedTs.value = 0
     await loadState()
     if (res.alarm) {
       ElMessage.warning(`检测到${res.verdictLabel}`)
@@ -1296,8 +928,8 @@ async function submit(frames: Blob[], label?: string, reset = false) {
     }
     await nextTick()
     renderMatrix()
-  } catch (e: any) {
-    ElMessage.error(e?.message || '提交失败')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '提交失败')
   } finally {
     loading.value = false
   }
@@ -1306,12 +938,16 @@ async function submit(frames: Blob[], label?: string, reset = false) {
 async function sampleOnce() {
   try {
     let frames: Blob[] = []
-    if (source.value === 'camera') frames = await captureFromCamera(k.value)
-    else if (source.value === 'video') frames = await captureFromVideo(k.value)
-    else frames = pendingFiles.value.slice(0, k.value)
+    if (source.value === 'camera') {
+      frames = await captureFromCamera(videoEl.value, cameraReady.value, k.value)
+    } else if (source.value === 'video') {
+      frames = await captureFromVideo(videoFileEl.value, videoReady.value, k.value)
+    } else {
+      frames = pendingFiles.value.slice(0, k.value)
+    }
     await submit(frames)
-  } catch (e: any) {
-    ElMessage.error(e?.message || '采样失败')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '采样失败')
   }
 }
 
@@ -1328,42 +964,24 @@ async function runDemo() {
   try {
     // 取一张底图
     let baseCanvas: HTMLCanvasElement | null = null
-    if (source.value === 'camera' && cameraReady.value && videoEl.value) {
-      baseCanvas = grabFrame(videoEl.value)
-    } else if (source.value === 'video' && videoReady.value && videoFileEl.value) {
-      const video = videoFileEl.value
-      video.currentTime = Math.min(video.duration * 0.2, 2)
-      await new Promise<void>((r) => video.addEventListener('seeked', () => r(), { once: true }))
-      baseCanvas = grabFrame(video)
-    } else if (pendingFiles.value.length) {
-      const bmp = await createImageBitmap(pendingFiles.value[0])
-      const canvas = document.createElement('canvas')
-      canvas.width = 960
-      canvas.height = Math.round((bmp.height / bmp.width) * 960)
-      canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height)
-      baseCanvas = canvas
-    }
-    if (!baseCanvas) {
-      // 兜底：没有摄像头/视频/上传图片时，用内置样图。
-      // 这样"只想看低频巡检效果"的人零准备就能点一键演示。
-      try {
-        const res = await fetch('/demo/reference_normal.jpg')
-        if (!res.ok) throw new Error('样图加载失败')
-        const bmp = await createImageBitmap(await res.blob())
-        const canvas = document.createElement('canvas')
-        canvas.width = 960
-        canvas.height = Math.round((bmp.height / bmp.width) * 960)
-        canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height)
-        baseCanvas = canvas
-      } catch {
-        ElMessage.warning('请先打开摄像头 / 选视频 / 选图片，演示需要一张底图')
-        return
-      }
+    try {
+      baseCanvas = await demoBaseCanvas({
+        source: source.value,
+        cameraReady: cameraReady.value,
+        videoReady: videoReady.value,
+        videoEl: videoEl.value,
+        videoFileEl: videoFileEl.value,
+        pendingFiles: pendingFiles.value
+      })
+    } catch {
+      ElMessage.warning('请先打开摄像头 / 选视频 / 选图片，演示需要一张底图')
+      return
     }
 
     // 1~2：正常两次（建立基线）
     // 第一次带 reset=true：演示必须自包含，不能沿用这个机位之前的基线
     // （否则换了场景/换了底图，历史基线会立刻把正常帧判成"画面持续异常"）。
+    if (!baseCanvas) throw new Error('演示底图缺失')
     await submit(await synthFrames(baseCanvas, 'normal', k.value), '正常样本', true)
     await submit(await synthFrames(baseCanvas, 'normal', k.value), '正常样本')
     // 3：遮挡
@@ -1374,11 +992,14 @@ async function runDemo() {
     const firstNormal = await synthFrames(baseCanvas, 'normal', k.value)
     await submit(firstNormal, '正常样本')
     // 模拟"几小时后把这段录像重放一次"
-    simulatedTs.value += 3 * 3600 * 1000
+    simulatedTs.value = jumpForward(
+      { simulatedTs: simulatedTs.value, advance: advance.value },
+      REPLAY_JUMP_MS
+    ).simulatedTs
     await submit(firstNormal, '重放旧画面')
     ElMessage.success('演示完成，请看时间线与 4 格矩阵')
-  } catch (e: any) {
-    ElMessage.error(e?.message || '演示失败')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '演示失败')
   } finally {
     advance.value = savedAdvance
     demoRunning.value = false
@@ -1391,66 +1012,8 @@ function renderMatrix() {
   if (!matrixChart) {
     matrixChart = echarts.init(matrixEl.value)
   }
-  const dHistAlarm = params.dHistAlarm ?? 0.15
-  const dBurstTransient = params.dBurstTransient ?? 0.55
-  const points = (history.value || [])
-    .filter((h) => h.dHist != null && h.dBurst != null)
-    .map((h) => ({
-      value: [h.dHist, Math.min(h.dBurst ?? 0, 1)],
-      itemStyle: { color: h.alarm ? '#f56c6c' : '#67c23a' },
-      name: h.label
-    }))
-  const cur = result.value
-  const current = cur?.matrix
-    ? [{
-        value: [cur.matrix.dHist ?? 0, Math.min(cur.matrix.dBurst ?? 0, 1)],
-        symbolSize: 16,
-        itemStyle: { color: '#409eff', borderColor: '#fff', borderWidth: 2 },
-        label: { show: true, formatter: '本次', position: 'right', fontSize: 11 },
-        name: '本次'
-      }]
-    : []
-
   matrixChart.setOption(
-    {
-      grid: { left: 48, right: 20, top: 20, bottom: 42 },
-      tooltip: {
-        trigger: 'item',
-        formatter: (p: any) => `${p.name || ''}<br/>dHist ${Number(p.value[0]).toFixed(3)}<br/>dBurst ${Number(p.value[1]).toFixed(3)}`
-      },
-      xAxis: {
-        name: 'dHist（历史偏离）', min: 0, max: 1, nameLocation: 'middle', nameGap: 26, nameTextStyle: { fontSize: 11 }
-      },
-      yAxis: { name: 'dBurst', min: 0, max: 1, nameTextStyle: { fontSize: 11 } },
-      series: [
-        {
-          type: 'scatter',
-          symbolSize: 9,
-          data: points,
-          markArea: {
-            silent: true,
-            label: { show: true, fontSize: 11, color: '#909399' },
-            data: [
-              [{ xAxis: dHistAlarm, yAxis: 0, name: '持续篡改（判）',
-                 itemStyle: { color: 'rgba(245,108,108,0.10)' } }, { xAxis: 1, yAxis: dBurstTransient }],
-              [{ xAxis: dHistAlarm, yAxis: dBurstTransient, name: '瞬时事件（不判）',
-                 itemStyle: { color: 'rgba(230,162,60,0.10)' } }, { xAxis: 1, yAxis: 1 }],
-              [{ xAxis: 0, yAxis: dBurstTransient, name: '正常活动',
-                 itemStyle: { color: 'rgba(103,194,58,0.07)' } }, { xAxis: dHistAlarm, yAxis: 1 }],
-              [{ xAxis: 0, yAxis: 0, name: '正常',
-                 itemStyle: { color: 'rgba(103,194,58,0.12)' } }, { xAxis: dHistAlarm, yAxis: dBurstTransient }]
-            ]
-          },
-          markLine: {
-            silent: true,
-            symbol: 'none',
-            lineStyle: { type: 'dashed', color: '#c0c4cc' },
-            data: [{ xAxis: dHistAlarm }, { yAxis: dBurstTransient }]
-          }
-        },
-        { type: 'scatter', data: current, z: 10 }
-      ]
-    },
+    buildMatrixOption(history.value, result.value, thresholdsFromParams(params)),
     true
   )
 }
@@ -1474,12 +1037,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   matrixChart?.dispose()
   matrixChart = null
-})
-
-const quadrants = quadrantDefs
-const nextTsText = computed(() => {
-  if (advance.value === '0' || !simulatedTs.value) return ''
-  return formatTime(simulatedTs.value + Number(advance.value) * 3600 * 1000)
+  lm.revokeUrl()
 })
 </script>
 

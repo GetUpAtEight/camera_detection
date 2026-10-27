@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import type { UserConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -6,6 +7,18 @@ import { fileURLToPath, URL } from 'node:url'
 // 绑定报 WinError 10013），可用环境变量 VITE_API_TARGET 换成别的端口：
 //   set VITE_API_TARGET=http://127.0.0.1:8090  &&  npm run dev
 const apiTarget = process.env.VITE_API_TARGET || 'http://127.0.0.1:8080'
+
+/**
+ * 单元测试配置由 vitest 自己读取（vitest 会加载本文件的 `test` 字段）。
+ * 这里用 `as UserConfig` 断言，避免 vite 的类型不认识 `test` 字段，
+ * 同时不给 devDependencies 之外的构建链增加依赖。
+ */
+const testConfig = {
+  environment: 'jsdom',
+  include: ['test/**/*.spec.ts'],
+  globals: false,
+  restoreMocks: true
+}
 
 export default defineConfig({
   plugins: [vue()],
@@ -36,5 +49,6 @@ export default defineConfig({
         }
       }
     }
-  }
-})
+  },
+  test: testConfig
+} as UserConfig & { test: typeof testConfig })

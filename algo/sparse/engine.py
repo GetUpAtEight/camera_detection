@@ -119,6 +119,64 @@ DEFAULT_PARAMS: Dict[str, Any] = {
     "freezeGapMs": 5 * 60 * 1000,   # 跨采样点重复的最短时间间隔（避免同一瞬间重复上报）
     "noiseFloor": 0.30,             # 帧间时间噪声 σ 的绝对下限（灰度级）
     "staticNoiseSpread": 0.002,     # σ 离散度下限
+    # --- 判据内部阈值（原散落在 _decide / _classify_persistent 里的字面量）
+    "dBurstFullScale": 0.02,        # intraMad 归一化到 0~1 的满量程（再大也只算 1.0）
+    "freezeRisk": 0.95,             # 冻结判决的风险分
+    "freezeConfidence": 0.90,       # 冻结判决的置信度
+    "rotateRisk": 0.90,             # 正在转动的风险分
+    "rotateConfidence": 0.85,       # 正在转动的置信度
+    "transientRiskRatio": 0.5,      # 瞬时事件的风险 = dHist × 它
+    "transientConfidence": 0.60,    # 瞬时事件的置信度
+    "affineInlierGlobal": 0.5,      # 与基线参考帧全局配准的最小内点率（判"刚体移动/已移位"用）
+    "affineMoveTransPx": 15.0,      # 全局配准平移超过它 ⇒ 机位动了
+    "affineMoveRotDegFactor": 2.0,  # 全局配准旋转阈值 = lmMoveDeg × 它
+    "affineInlierLocal": 0.4,       # 未标参照物时全局配准的最低内点率（补充证据）
+    "affineLocalTransPx": 10.0,     # 未标参照物时全局配准的平移阈值
+    "affineLocalRotDeg": 1.5,       # 未标参照物时全局配准的旋转阈值
+    "movedAffineRisk": 0.92,        # 刚体移动（全局配准判定机位动了）的风险分
+    "movedAffineConfidence": 0.88,  # 同上，置信度
+    "objectChangeRiskCap": 0.35,    # 物体变动的风险上限（占比再大也不超过它）
+    "objectChangeConfidence": 0.60, # 物体变动的置信度
+    "coldStartRisk": 0.55,          # 基线未建立但单帧越线时的风险分
+    "coldStartConfidence": 0.25,    # 同上，低置信
+    "coldIdleConfidence": 0.15,     # 基线建立中的置信度
+    "normalConfidence": 0.80,       # 正常判决的置信度
+    # --- 类型投票：证据触发阈值
+    "lowBlockRatioCovered": 0.5,    # 低熵块占比超过它 ⇒ 遮挡证据
+    "entropyDropExtraFactor": 1.5,  # 熵降超过 relEntropyDrop × 它 ⇒ 再加一票遮挡
+    "entropyDropBlurFactor": 0.8,   # 熵降低于 relEntropyDrop × 它 ⇒ 才允许判失焦
+    "defocusContrastPreserved": 0.35,  # 对比度降幅低于它 ⇒ 对比度仍保留（判失焦前提）
+    "defocusRefNccMin": 0.5,        # 整帧相关性 ≥ 它 ⇒ 内容对得上（判失焦前提）
+    "coveredEdgeDensity": 0.0035,   # 边缘密度低于它 ⇒ 画面结构基本消失
+    "coveredEdgeContrast": 0.30,    # 边缘消失时，对比度还要再降这么多才判遮挡
+    "structureContrastKept": 0.45,  # 对比度降幅低于它 ⇒ 认为画面结构仍在
+    "refNccLost": 0.45,             # 整帧相关性低于它 ⇒ 内容已不是原视野
+    # --- 类型投票：各类证据的票重
+    "coveredVoteContrast": 0.7,     # 全局对比度崩塌 → 遮挡
+    "coveredVoteLowBlock": 0.5,     # 低熵块占比 → 遮挡
+    "coveredVoteEntropy": 0.6,      # 相对熵降 → 遮挡
+    "coveredVoteEntropyExtra": 0.2, # 熵降翻倍时追加给遮挡
+    "coveredVoteEdgeCollapse": 0.3, # 参照物失配但结构塌陷 → 遮挡
+    "defocusedVote": 0.9,           # 确认失焦
+    "defocusedVoteWeak": 0.15,      # 清晰度降了但证据不足的弱票
+    "movedVoteCoveredRef": 0.7,     # 参照物失配但结构塌陷 → 遮挡
+    "movedVoteLandmark": 0.95,      # 参照物一致位移 → 移位
+    "movedVoteDefocusedRef": 0.6,   # 参照物失配但明显变软 → 失焦
+    "movedVoteAffineRef": 1.0,      # 参照物失配但全局配准成功 → 移位
+    "movedVoteStructureKept": 1.0,  # 结构仍在但整帧对不上 → 移位
+    "movedVoteBgShift": 0.85,       # 全图相位相关一致平移 → 移位
+    "movedVoteEdgeChange": 0.5,     # 边缘结构改变（次证据）→ 移位
+    "movedVoteAffineLocal": 0.8,    # 未标参照物时全局配准 → 移位
+    "movedVoteBeingRotated": 0.4,   # burst 内正在转动追加给移位
+    # --- 类型投票：得分 → 风险/置信度
+    "voteConfidenceBase": 0.45,     # 置信度 = base + scale × 得分
+    "voteConfidenceScale": 0.5,
+    "voteConfidenceCap": 0.95,      # 置信度上限
+    "voteRiskBase": 0.55,           # 风险 = base + scale × 得分
+    "voteRiskScale": 0.4,
+    "voteRiskCap": 0.99,            # 风险上限
+    "voteEmptyRisk": 0.6,           # 一条证据都没有时的风险（只报"画面持续异常"）
+    "voteEmptyConfidence": 0.5,     # 同上，置信度
     # --- 基线准入
     "admitBaseline": True,          # 只有正常样本才进基线库
 }
@@ -148,6 +206,125 @@ def _ratio_drop(current: float, baseline: float) -> float:
     if baseline is None or baseline <= 1e-9:
         return 0.0
     return float(max(0.0, (baseline - current) / baseline))
+
+
+# --------------------------------------------------------------------------- 判决纯函数
+# 这些函数只由入参决定返回值，不读写实例状态，便于单独调参与单测。
+# 约定：返回 None 表示"本分支不成立"；返回元组表示"本分支命中，直接作为 _decide 的判决"。
+def _check_unusable(l1: Dict[str, Any], l0: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[tuple]:
+    """P-1 样本可用性：burst 内曝光/白平衡未收敛时不下结论。"""
+    if not l1.get("available"):
+        return None
+    if l1.get("lumaDrift", 0.0) > cfg["lumaDriftUnstable"]:
+        return (V_UNUSABLE, 0.0, 0.0,
+                [f"burst 内亮度漂移 {l1['lumaDrift']:.3f} 超过 {cfg['lumaDriftUnstable']}，"
+                 "判定为曝光/自动增益未收敛，本次不下结论（样本不并入基线）"],
+                {"cell": "unusable", "dHist": l0.get("dHist"), "dBurst": l1.get("intraMad")})
+    if l1.get("chromaDrift", 0.0) > cfg["chromaDriftUnstable"]:
+        return (V_UNUSABLE, 0.0, 0.0,
+                [f"burst 内色度漂移 {l1['chromaDrift']:.3f} 超过 {cfg['chromaDriftUnstable']}，"
+                 "白平衡未收敛，本次不下结论"],
+                {"cell": "unusable", "dHist": l0.get("dHist"), "dBurst": l1.get("intraMad")})
+    return None
+
+
+def _check_being_rotated(l1: Dict[str, Any], l0: Dict[str, Any],
+                         cfg: Dict[str, Any]) -> Optional[tuple]:
+    """P5 正在被转动：burst 内一致平移 + 足够 inlier（先于持续性判定）。"""
+    if not l1.get("beingRotated"):
+        return None
+    return (V_ROTATED, cfg["rotateRisk"], cfg["rotateConfidence"],
+            [f"burst 内一致平移 {l1.get('intraOrbTranslation')} px、inlier {l1.get('intraOrbInlier')}"
+             f"，超过阈值 {cfg['rotateOrb']} px / {cfg['rotateInlier']}：镜头正在被转动"],
+            {"cell": "being_rotated", "dHist": l0.get("dHist"),
+             "dBurst": l1.get("intraMad")})
+
+
+def _stability_cell(l0: Dict[str, Any], l1: Dict[str, Any],
+                    cfg: Dict[str, Any]) -> tuple:
+    """稳定性分解：历史偏离(高/低) × 微时序动态(高/低) → 4 格矩阵。"""
+    d_hist = float(l0.get("dHist") or 0.0)
+    outlier_ratio = float(l0.get("pixelOutlierRatio") or 0.0)
+    baseline_ready = bool(l0.get("available")) and (l0.get("dHist") is not None)
+    dBurst = float(l1.get("intraMad") or 0.0)
+    # 把 intraMad 归一到 0~1：经验上 0.02 已经很剧烈
+    d_burst_norm = min(dBurst / cfg["dBurstFullScale"], 1.0)
+
+    # 两个口径必须并用：
+    #   dHist 是"全图平均偏离"，对全局变化敏感，但局部大面积变化会被稀释；
+    #   pixelOutlierRatio 是"有多少像素显著偏离"，对局部遮挡/异物更敏感。
+    # 只用 dHist 会把"画面里多了一辆车"这种局部变化算成正常。
+    high_hist = baseline_ready and (
+        d_hist > cfg["dHistAlarm"] or outlier_ratio > cfg["outlierAlarm"]
+    )
+    high_burst = d_burst_norm > cfg["dBurstTransient"]
+
+    if high_hist and not high_burst:
+        cell = "persistent"
+    elif high_hist and high_burst:
+        cell = "transient"
+    elif (not high_hist) and high_burst:
+        cell = "activity"
+    else:
+        cell = "normal"
+
+    matrix = {"dHist": round(d_hist, 4), "dBurst": round(d_burst_norm, 4),
+              "cell": cell, "baselineReady": baseline_ready}
+    return cell, matrix, d_hist, outlier_ratio, d_burst_norm, baseline_ready, high_burst
+
+
+def _rigid_motion_evidence(l0: Dict[str, Any], cfg: Dict[str, Any],
+                           matrix: Dict[str, Any]) -> Optional[tuple]:
+    """与基线参考帧的全局配准成功且位移/旋转足够大 ⇒ 机位本身动了（刚体运动）。"""
+    contour_drop = float(l0.get("contrastDrop") or 0.0)
+    structure_alive = contour_drop < cfg["relContrastDrop"]
+    affine = ((l0.get("landmarks") or {}).get("affine") or {})
+    if not (structure_alive and affine.get("ok")
+            and float(affine.get("inlierRatio") or 0.0) >= cfg["affineInlierGlobal"]):
+        return None
+    rot = abs(float(affine.get("rotationDeg") or 0.0))
+    trans = float(affine.get("translation") or 0.0)
+    if not (rot >= cfg["lmMoveDeg"] * cfg["affineMoveRotDegFactor"]
+            or trans >= cfg["affineMoveTransPx"]):
+        return None
+    reason = (
+        f"与基线参考帧的 ORB 全局配准成功：{trans:.1f}px 平移 / {rot:.1f}° 旋转"
+        f"（内点率 {affine.get('inlierRatio')}，{affine.get('matches')} 对匹配点）——"
+        "整幅画面是同一个刚体变换，说明是机位本身动了，不是画面内容变化"
+    )
+    return reason, (V_MOVED, cfg["movedAffineRisk"], cfg["movedAffineConfidence"],
+                    [reason], matrix)
+
+
+def _object_change_evidence(l2: Dict[str, Any], l0: Dict[str, Any], cfg: Dict[str, Any],
+                            matrix: Dict[str, Any]) -> Optional[tuple]:
+    """变化集中在画面一小块、且不遮挡/不失焦/参照物未动 ⇒ 场景内物体变动。"""
+    changed = l0.get("changed") or {}
+    largest = float(changed.get("largestRatio") or 0.0)
+    covered_ev = (float(l0.get("entropyDrop") or 0.0) >= cfg["relEntropyDrop"]) \
+        or (l2["entropy"] < cfg["entropyFloor"])
+    blur_ev = float(l0.get("sharpnessDrop") or 0.0) >= cfg["relSharpnessDrop"]
+    lm_consensus = ((l0.get("landmarks") or {}).get("consensus") or {})
+    if not (largest > 0.0 and largest <= cfg["objectChangeRatio"]
+            and not covered_ev and not blur_ev
+            and not lm_consensus.get("moved")):
+        return None
+    if cfg["objectChangeAlarm"]:
+        reason = (
+            f"变化集中在画面一块区域（最大连通块占 {largest:.0%} ≤ "
+            f"{cfg['objectChangeRatio']:.0%}），不遮挡、不失焦、机位未动："
+            "判为场景内物体变动（已按配置告警）"
+        )
+    else:
+        reason = (
+            f"变化集中在画面一块区域（最大连通块占 {largest:.0%} ≤ "
+            f"{cfg['objectChangeRatio']:.0%}），不遮挡、不失焦、机位未动 ⇒ "
+            "判为场景内物体变动（如桌面物品被挪动），只记录不告警。"
+            "如需连这块也不管，可把它标成「忽略区」"
+        )
+    return reason, (V_OBJECT, min(cfg["objectChangeRiskCap"], largest),
+                    cfg["objectChangeConfidence"], [reason],
+                    {**matrix, "cell": "object_change", "changed": changed})
 
 
 class SparseEngine:
@@ -359,64 +536,26 @@ class SparseEngine:
         reasons: List[str] = []
 
         # ---------- P-1 样本可用性（必须最先判，坏样本不能拿去比基线）
-        if l1.get("available"):
-            if l1.get("lumaDrift", 0.0) > cfg["lumaDriftUnstable"]:
-                return (V_UNUSABLE, 0.0, 0.0,
-                        [f"burst 内亮度漂移 {l1['lumaDrift']:.3f} 超过 {cfg['lumaDriftUnstable']}，"
-                         "判定为曝光/自动增益未收敛，本次不下结论（样本不并入基线）"],
-                        {"cell": "unusable", "dHist": l0.get("dHist"), "dBurst": l1.get("intraMad")})
-            if l1.get("chromaDrift", 0.0) > cfg["chromaDriftUnstable"]:
-                return (V_UNUSABLE, 0.0, 0.0,
-                        [f"burst 内色度漂移 {l1['chromaDrift']:.3f} 超过 {cfg['chromaDriftUnstable']}，"
-                         "白平衡未收敛，本次不下结论"],
-                        {"cell": "unusable", "dHist": l0.get("dHist"), "dBurst": l1.get("intraMad")})
+        unusable = _check_unusable(l1, l0, cfg)
+        if unusable is not None:
+            return unusable
 
         # ---------- P0 冻结 / 重放
         freeze, freeze_reason, freeze_evidence = self._detect_freeze(state, l1, l2, ts)
         if freeze:
             reasons.append(freeze_reason)
-            return (V_FREEZE, 0.95, 0.9, reasons,
+            return (V_FREEZE, cfg["freezeRisk"], cfg["freezeConfidence"], reasons,
                     {"cell": "freeze", "dHist": l0.get("dHist"),
                      "dBurst": l1.get("intraMad"), "freezeEvidence": freeze_evidence})
 
         # ---------- P5 正在被转动（先于持续性判定：这是"正在发生"的强证据）
-        if l1.get("beingRotated"):
-            reasons.append(
-                f"burst 内一致平移 {l1.get('intraOrbTranslation')} px、inlier {l1.get('intraOrbInlier')}"
-                f"，超过阈值 {cfg['rotateOrb']} px / {cfg['rotateInlier']}：镜头正在被转动"
-            )
-            return (V_ROTATED, 0.9, 0.85, reasons,
-                    {"cell": "being_rotated", "dHist": l0.get("dHist"),
-                     "dBurst": l1.get("intraMad")})
+        rotated = _check_being_rotated(l1, l0, cfg)
+        if rotated is not None:
+            return rotated
 
         # ---------- 稳定性分解 4 格矩阵
-        d_hist = float(l0.get("dHist") or 0.0)
-        outlier_ratio = float(l0.get("pixelOutlierRatio") or 0.0)
-        baseline_ready = bool(l0.get("available")) and (l0.get("dHist") is not None)
-        dBurst = float(l1.get("intraMad") or 0.0)
-        # 把 intraMad 归一到 0~1：经验上 0.02 已经很剧烈
-        d_burst_norm = min(dBurst / 0.02, 1.0)
-
-        # 两个口径必须并用：
-        #   dHist 是"全图平均偏离"，对全局变化敏感，但局部大面积变化会被稀释；
-        #   pixelOutlierRatio 是"有多少像素显著偏离"，对局部遮挡/异物更敏感。
-        # 只用 dHist 会把"画面里多了一辆车"这种局部变化算成正常。
-        high_hist = baseline_ready and (
-            d_hist > cfg["dHistAlarm"] or outlier_ratio > cfg["outlierAlarm"]
-        )
-        high_burst = d_burst_norm > cfg["dBurstTransient"]
-
-        if high_hist and not high_burst:
-            cell = "persistent"
-        elif high_hist and high_burst:
-            cell = "transient"
-        elif (not high_hist) and high_burst:
-            cell = "activity"
-        else:
-            cell = "normal"
-
-        matrix = {"dHist": round(d_hist, 4), "dBurst": round(d_burst_norm, 4),
-                  "cell": cell, "baselineReady": baseline_ready}
+        cell, matrix, d_hist, outlier_ratio, d_burst_norm, baseline_ready, high_burst = \
+            _stability_cell(l0, l1, cfg)
 
         # ---------- 瞬时事件：不告警
         if cell == "transient":
@@ -424,7 +563,8 @@ class SparseEngine:
                 f"历史偏离高（dHist={d_hist:.3f}）但 burst 内动态也高（dBurst={d_burst_norm:.3f}）"
                 "：判为瞬时事件（有人经过 / 光照突变），不告警"
             )
-            return (V_TRANSIENT, d_hist * 0.5, 0.6, reasons, matrix)
+            return (V_TRANSIENT, d_hist * cfg["transientRiskRatio"],
+                    cfg["transientConfidence"], reasons, matrix)
 
         # ---------- P1~P4 持续性篡改
         if cell == "persistent":
@@ -435,47 +575,17 @@ class SparseEngine:
             #
             # 但必须排除"画面已经被遮住"的情况：纯色画面上 ORB 可能凑出少量
             # 伪匹配点，硬解出一个大变换。遮挡时结构已经塌陷，不能拿配准说事。
-            contour_drop = float(l0.get("contrastDrop") or 0.0)
-            structure_alive = contour_drop < cfg["relContrastDrop"]
-            affine = ((l0.get("landmarks") or {}).get("affine") or {})
-            if structure_alive and affine.get("ok") and float(affine.get("inlierRatio") or 0.0) >= 0.5:
-                rot = abs(float(affine.get("rotationDeg") or 0.0))
-                trans = float(affine.get("translation") or 0.0)
-                if rot >= cfg["lmMoveDeg"] * 2 or trans >= 15.0:
-                    reasons.append(
-                        f"与基线参考帧的 ORB 全局配准成功：{trans:.1f}px 平移 / {rot:.1f}° 旋转"
-                        f"（内点率 {affine.get('inlierRatio')}，{affine.get('matches')} 对匹配点）——"
-                        "整幅画面是同一个刚体变换，说明是机位本身动了，不是画面内容变化"
-                    )
-                    return (V_MOVED, 0.92, 0.88, reasons, matrix)
+            rigid = _rigid_motion_evidence(l0, cfg, matrix)
+            if rigid is not None:
+                reasons.append(rigid[0])
+                return rigid[1]
 
             # 局部物体变动：变化集中在画面一小块（最大连通块占比小），
             # 且不遮挡、不失焦、参照物也没动 —— 这是"桌上东西被挪走了"，不是篡改。
-            changed = l0.get("changed") or {}
-            largest = float(changed.get("largestRatio") or 0.0)
-            covered_ev = (float(l0.get("entropyDrop") or 0.0) >= cfg["relEntropyDrop"]) \
-                or (l2["entropy"] < cfg["entropyFloor"])
-            blur_ev = float(l0.get("sharpnessDrop") or 0.0) >= cfg["relSharpnessDrop"]
-            lm_consensus = ((l0.get("landmarks") or {}).get("consensus") or {})
-            if (largest > 0.0 and largest <= cfg["objectChangeRatio"]
-                    and not covered_ev and not blur_ev
-                    and not lm_consensus.get("moved")):
-                level = SAMPLE_VERDICTS[V_OBJECT]
-                if cfg["objectChangeAlarm"]:
-                    reasons.append(
-                        f"变化集中在画面一块区域（最大连通块占 {largest:.0%} ≤ "
-                        f"{cfg['objectChangeRatio']:.0%}），不遮挡、不失焦、机位未动："
-                        "判为场景内物体变动（已按配置告警）"
-                    )
-                else:
-                    reasons.append(
-                        f"变化集中在画面一块区域（最大连通块占 {largest:.0%} ≤ "
-                        f"{cfg['objectChangeRatio']:.0%}），不遮挡、不失焦、机位未动 ⇒ "
-                        "判为场景内物体变动（如桌面物品被挪动），只记录不告警。"
-                        "如需连这块也不管，可把它标成「忽略区」"
-                    )
-                return (V_OBJECT, min(0.35, largest), 0.6, reasons,
-                        {**matrix, "cell": "object_change", "changed": changed})
+            obj = _object_change_evidence(l2, l0, cfg, matrix)
+            if obj is not None:
+                reasons.append(obj[0])
+                return obj[1]
 
             verdict, risk, confidence, type_reasons = self._classify_persistent(l1, l2, l0)
             reasons.extend(type_reasons)
@@ -491,13 +601,13 @@ class SparseEngine:
                     f"基线尚未建立（{baseline_meta.get('status')}，样本 {baseline_meta.get('samples')}），"
                     f"但单帧绝对指标已越过阈值（{kind}）——低置信提示，需积累基线后复核"
                 )
-                return (V_COLD, 0.55, 0.25, reasons,
+                return (V_COLD, cfg["coldStartRisk"], cfg["coldStartConfidence"], reasons,
                         {**matrix, "cell": "cold_start_alert"})
             reasons.append(
                 f"基线建立中（{baseline_meta.get('status')}，{baseline_meta.get('samples')} 个样本，"
                 f"{len([1 for i in state.slots.values() if i])} 个时段槽）：本次只记录，不下结论"
             )
-            return (V_COLD, 0.0, 0.15, reasons, {**matrix, "cell": "cold_start"})
+            return (V_COLD, 0.0, cfg["coldIdleConfidence"], reasons, {**matrix, "cell": "cold_start"})
 
         motion_desc = "微时序静止" if not high_burst else "微时序有动态但未超出瞬时阈值"
         reasons.append(
@@ -505,7 +615,7 @@ class SparseEngine:
             f"离群占比 {outlier_ratio:.3f} ≤ {cfg['outlierAlarm']}）、"
             f"{motion_desc}（dBurst={d_burst_norm:.3f}）：与基线一致"
         )
-        return (V_NORMAL, 0.0, 0.8, reasons, matrix)
+        return (V_NORMAL, 0.0, cfg["normalConfidence"], reasons, matrix)
 
     # ------------------------------------------------------------------ 冻结判据
     def _detect_freeze(self, state: CameraState, l1: Dict[str, Any], l2: Dict[str, Any],
@@ -581,20 +691,21 @@ class SparseEngine:
         # 加对比度这个维度很关键：纸面、手掌、布料盖住镜头时，虽然有噪声和 JPEG 纹理
         # 让熵只掉 20%，但灰度标准差会掉到原来的几分之一 —— 信号最强。
         if contrast_drop >= cfg["relContrastDrop"]:
-            votes["covered"] += 0.7
+            votes["covered"] += cfg["coveredVoteContrast"]
             reasons.append(
                 f"全局对比度（灰度标准差）相对基线下降 {contrast_drop:.1%}"
                 f"（阈值 {cfg['relContrastDrop']:.0%}）：画面趋于单一颜色 ⇒ 遮挡"
             )
-        if low_block >= 0.5:
-            votes["covered"] += 0.5
-            reasons.append(f"低熵块占比 {low_block:.2f} ≥ 0.5：画面大面积为无纹理区域")
+        if low_block >= cfg["lowBlockRatioCovered"]:
+            votes["covered"] += cfg["coveredVoteLowBlock"]
+            reasons.append(f"低熵块占比 {low_block:.2f} ≥ {cfg['lowBlockRatioCovered']}："
+                           "画面大面积为无纹理区域")
         if entropy_drop >= cfg["relEntropyDrop"]:
-            votes["covered"] += 0.6
+            votes["covered"] += cfg["coveredVoteEntropy"]
             reasons.append(f"熵相对基线下降 {entropy_drop:.1%}（阈值 {cfg['relEntropyDrop']:.0%}）："
                            "灰度分布向少数色阶塌陷")
-        if entropy_drop >= 1.5 * cfg["relEntropyDrop"]:
-            votes["covered"] += 0.2
+        if entropy_drop >= cfg["entropyDropExtraFactor"] * cfg["relEntropyDrop"]:
+            votes["covered"] += cfg["coveredVoteEntropyExtra"]
 
         # ---------------- 失焦：证据是"直方图/对比度基本不变，只是变软"
         # 这是与遮挡的关键分界：模糊不改变灰度分布，只削弱高频。
@@ -603,19 +714,20 @@ class SparseEngine:
         # 还要求"内容对得上"（与基线参考帧 NCC ≥ 0.5）：
         # 如果画面根本换成别的东西了，它的清晰度本来就可能更低，
         # 这时候拿"清晰度下降"解释成失焦是错的。
-        contrast_preserved = contrast_drop < 0.35
+        contrast_preserved = contrast_drop < cfg["defocusContrastPreserved"]
         ref_ncc = (l0.get("landmarks") or {}).get("refNcc")
-        content_matches = (ref_ncc is None) or (float(ref_ncc) >= 0.5)
+        content_matches = (ref_ncc is None) or (float(ref_ncc) >= cfg["defocusRefNccMin"])
         if sharp_drop >= cfg["relSharpnessDrop"]:
-            if entropy_drop < 0.8 * cfg["relEntropyDrop"] and contrast_preserved and content_matches:
-                votes["defocused"] += 0.9
+            if entropy_drop < cfg["entropyDropBlurFactor"] * cfg["relEntropyDrop"] \
+                    and contrast_preserved and content_matches:
+                votes["defocused"] += cfg["defocusedVote"]
                 reasons.append(
                     f"清晰度相对基线下降 {sharp_drop:.1%}（阈值 {cfg['relSharpnessDrop']:.0%}），"
                     f"而熵只降 {entropy_drop:.1%}、对比度只降 {contrast_drop:.1%}、"
                     f"整帧相关性 {ref_ncc}：灰度分布与对比度都在、只是边缘变软 ⇒ 失焦"
                 )
             else:
-                votes["defocused"] += 0.15
+                votes["defocused"] += cfg["defocusedVoteWeak"]
                 hint = "" if content_matches else f"（整帧相关性仅 {ref_ncc}，内容已变）"
                 reasons.append(
                     f"清晰度下降 {sharp_drop:.1%}，但熵降 {entropy_drop:.1%}、"
@@ -635,7 +747,7 @@ class SparseEngine:
 
         if landmark_configured:
             if consensus.get("moved"):
-                votes["moved"] += 0.95
+                votes["moved"] += cfg["movedVoteLandmark"]
                 reasons.append(
                     f"已标定 {consensus.get('count')} 个参照物，它们能被同一个刚体变换解释："
                     f"{consensus.get('translation')}px 平移 / {consensus.get('rotationDeg')}° 旋转"
@@ -662,41 +774,47 @@ class SparseEngine:
                 edge_density = float(l2.get("edgeDensity") or 0.0)
                 covered_ev = (
                     (entropy_drop >= cfg["relEntropyDrop"])
-                    or (low_block >= 0.5)
+                    or (low_block >= cfg["lowBlockRatioCovered"])
                     or (contrast_drop_here >= cfg["relContrastDrop"])
                     # 边缘几乎消失 + 对比度也掉了 ⇒ 更像"被盖住"而不是"变软"
-                    or (edge_density < 0.0035 and contrast_drop_here >= 0.30)
+                    or (edge_density < cfg["coveredEdgeDensity"]
+                        and contrast_drop_here >= cfg["coveredEdgeContrast"])
                 )
                 blur_ev = sharp_drop >= cfg["relSharpnessDrop"]
                 # 画面还剩不剩结构？对比度没崩、边缘不是接近 0
-                structure_kept = (contrast_drop_here < 0.45) and (edge_density >= 0.0035)
+                structure_kept = (contrast_drop_here < cfg["structureContrastKept"]) \
+                    and (edge_density >= cfg["coveredEdgeDensity"])
                 affine = ((l0.get("landmarks") or {}).get("affine") or {})
                 ncc = float(((l0.get("landmarks") or {}).get("refNcc")) or 0.0)
                 rot = abs(float(affine.get("rotationDeg") or 0.0))
                 trans = float(affine.get("translation") or 0.0)
-                affine_moved = bool(affine.get("ok") and (rot >= cfg["lmMoveDeg"] * 2 or trans >= 15.0))
+                affine_moved = bool(
+                    affine.get("ok")
+                    and (rot >= cfg["lmMoveDeg"] * cfg["affineMoveRotDegFactor"]
+                         or trans >= cfg["affineMoveTransPx"])
+                )
 
                 if covered_ev:
-                    votes["covered"] += 0.7
+                    votes["covered"] += cfg["movedVoteCoveredRef"]
                     reasons.append(
                         f"参照物全部失配，但画面结构已塌陷（对比度降 {contrast_drop_here:.1%}、"
                         f"熵降 {entropy_drop:.1%}、边缘密度 {edge_density:.4f}）⇒ 按遮挡处理，不判移位"
                     )
-                elif blur_ev and ncc >= 0.5 and not affine_moved:
-                    votes["defocused"] += 0.6
+                elif blur_ev and ncc >= cfg["defocusRefNccMin"] and not affine_moved:
+                    votes["defocused"] += cfg["movedVoteDefocusedRef"]
                     reasons.append(
                         f"参照物全部失配，但画面明显变软（清晰度降 {sharp_drop:.1%}）、"
                         f"对比度只降 {contrast_drop_here:.1%}、整帧相关性仍有 {ncc:.2f}"
                         "（内容对得上）⇒ 按失焦处理，不判移位"
                     )
                 elif affine_moved:
-                    votes["moved"] += 1.0
+                    votes["moved"] += cfg["movedVoteAffineRef"]
                     reasons.append(
                         f"参照物全部失配，但与基线参考帧的全局配准成功：{trans:.1f}px 平移 / "
                         f"{rot:.1f}° 旋转（内点率 {affine.get('inlierRatio')}）⇒ 摄像头被转动/移位"
                     )
-                elif ncc < 0.45 and structure_kept:
-                    votes["moved"] += 1.0
+                elif ncc < cfg["refNccLost"] and structure_kept:
+                    votes["moved"] += cfg["movedVoteStructureKept"]
                     reasons.append(
                         f"参照物全部失配，画面结构仍在（边缘密度 {edge_density:.4f}、"
                         f"对比度降 {contrast_drop_here:.1%}），但与基线参考帧整体相关性只有 {ncc:.2f}"
@@ -718,7 +836,7 @@ class SparseEngine:
             # 相位相关算出的"位移"只是噪声在对齐噪声，必须排除。
             has_structure = edge_drop < cfg["relEdgeDrop"]
             if has_structure and shift_mag >= cfg["bgShiftPx"] and shift_resp >= cfg["bgShiftResponse"]:
-                votes["moved"] += 0.85
+                votes["moved"] += cfg["movedVoteBgShift"]
                 reasons.append(
                     f"当前画面与基线背景存在一致全局平移 {shift_mag:.1f}px"
                     f"（相位相关响应 {shift_resp:.2f}，阈值 {cfg['bgShiftPx']}px / {cfg['bgShiftResponse']}）"
@@ -728,33 +846,34 @@ class SparseEngine:
             # 边缘结构改变、但既不是"变平"也不是"变软"，作为移位的次证据
             if edge_drop >= cfg["relEdgeDrop"] and entropy_drop < cfg["relEntropyDrop"] \
                     and sharp_drop < cfg["relSharpnessDrop"]:
-                votes["moved"] += 0.5
+                votes["moved"] += cfg["movedVoteEdgeChange"]
                 reasons.append(f"边缘结构相对基线改变 {edge_drop:.1%}，但画面既不模糊也未变平 ⇒ 视角/机位变化")
 
             # 全局配准（平移 + 旋转）：没标参照物时的补充证据。
             # 相位相关估不了旋转，而摄像机被拧一下主要是旋转 —— 这条能补上。
             affine = ((l0.get("landmarks") or {}).get("affine") or {})
-            if affine.get("ok") and affine.get("inlierRatio", 0) >= 0.4:
+            if affine.get("ok") and affine.get("inlierRatio", 0) >= cfg["affineInlierLocal"]:
                 rot = abs(float(affine.get("rotationDeg") or 0.0))
                 trans = float(affine.get("translation") or 0.0)
-                if trans >= 10.0 or rot >= 1.5:
-                    votes["moved"] += 0.8
+                if trans >= cfg["affineLocalTransPx"] or rot >= cfg["affineLocalRotDeg"]:
+                    votes["moved"] += cfg["movedVoteAffineLocal"]
                     reasons.append(
                         f"与基线参考帧的 ORB 全局配准：{trans:.1f}px 平移 / {rot:.1f}° 旋转"
                         f"（内点率 {affine.get('inlierRatio')}）⇒ 摄像机视野已改变"
                     )
 
         if l1.get("beingRotated"):
-            votes["moved"] += 0.4
+            votes["moved"] += cfg["movedVoteBeingRotated"]
 
         best = max(votes.items(), key=lambda kv: kv[1])
         total = sum(votes.values())
         if total <= 0:
-            return (V_CHANGE, 0.6, 0.5,
+            return (V_CHANGE, cfg["voteEmptyRisk"], cfg["voteEmptyConfidence"],
                     ["画面显著偏离历史基线，但类型证据不足，只报『画面持续异常』"])
         kind, score = best
-        confidence = min(0.95, 0.45 + 0.5 * score)
-        risk = min(0.99, 0.55 + 0.4 * score)
+        confidence = min(cfg["voteConfidenceCap"],
+                         cfg["voteConfidenceBase"] + cfg["voteConfidenceScale"] * score)
+        risk = min(cfg["voteRiskCap"], cfg["voteRiskBase"] + cfg["voteRiskScale"] * score)
         mapping = {"covered": V_COVERED, "defocused": V_DEFOCUSED, "moved": V_MOVED}
         return (mapping[kind], risk, confidence, reasons)
 

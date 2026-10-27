@@ -44,3 +44,13 @@ Thumbs.db
 .dsh-office*/
 dsh-acl-recovery/
 *.log
+
+# 临时探测脚本（各协作方调试残留，不应入库）
+_expected.json
+_newdecide.txt
+.probe_sandbox.txt
+.npmcache/
+_cp*.txt
+_mkcp.ps1
+_pathing.jar
+_safetest.py

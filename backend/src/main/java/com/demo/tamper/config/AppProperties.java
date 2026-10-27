@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * app.* 配置绑定。
  *
- * <p>本系统只保留低频巡检，因此只有算法层地址这一组配置。
+ * <p>本系统只保留低频巡检，因此只有算法层地址与访问令牌两组配置。
  */
 @Getter
 @Setter
@@ -15,6 +15,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AppProperties {
 
     private Algo algo = new Algo();
+
+    private Auth auth = new Auth();
 
     @Getter
     @Setter
@@ -32,5 +34,17 @@ public class AppProperties {
          * 给足余量，避免慢机器上正常请求被误判成超时。
          */
         private long readTimeoutMs = 120000;
+    }
+
+    @Getter
+    @Setter
+    public static class Auth {
+        /**
+         * 访问令牌。环境变量 {@code APP_AUTH_TOKEN} 可覆盖本值。
+         *
+         * <p><b>留空 = 不鉴权（fail-open）</b>：启动后第一次请求会打一条 WARN 日志。
+         * 这是为了本地演示能一键起，但部署前必须配置。
+         */
+        private String token = "";
     }
 }

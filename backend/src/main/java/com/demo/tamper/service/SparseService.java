@@ -1,6 +1,7 @@
 package com.demo.tamper.service;
 
 import com.demo.tamper.common.BusinessException;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,9 +27,21 @@ public class SparseService {
     private static final Logger log = LoggerFactory.getLogger(SparseService.class);
 
     private final AlgoGatewayService gateway;
+    private final HttpServletRequest request;
 
-    public SparseService(AlgoGatewayService gateway) {
+    /**
+     * @param request 当前请求；租户由 {@link com.demo.tamper.config.TenantInterceptor}
+     *                解析后写进 request attribute，{@link TenantIds} 取出来拼成
+     *                {@code {tenant}:{cameraId}}——算法层按落盘目录隔离租户。
+     */
+    public SparseService(AlgoGatewayService gateway, HttpServletRequest request) {
         this.gateway = gateway;
+        this.request = request;
+    }
+
+    /** 机位 id 的算法层作用域：{@code tenant:cameraId}。 */
+    private String scoped(String cameraId) {
+        return TenantIds.scoped(TenantIds.of(request), cameraId);
     }
 
     public Map<String, Object> meta() {
@@ -70,7 +83,7 @@ public class SparseService {
             if (tempFiles.isEmpty()) {
                 throw new BusinessException(400, "上传的帧都是空文件");
             }
-            return gateway.sparseSample(cameraId, tempFiles, tsMs, name, reset, params);
+            return gateway.sparseSample(scoped(cameraId), tempFiles, tsMs, name, reset, params);
         } catch (IOException e) {
             throw new BusinessException(500, "暂存抽样帧失败：" + e.getMessage());
         } finally {
@@ -89,19 +102,19 @@ public class SparseService {
     }
 
     public Map<String, Object> state(String cameraId) {
-        return gateway.sparseState(cameraId);
+        return gateway.sparseState(scoped(cameraId));
     }
 
     public Map<String, Object> reset(String cameraId) {
-        return gateway.sparseReset(cameraId);
+        return gateway.sparseReset(scoped(cameraId));
     }
 
     public Map<String, Object> delete(String cameraId) {
-        return gateway.sparseDelete(cameraId);
+        return gateway.sparseDelete(scoped(cameraId));
     }
 
     public byte[] thumb(String cameraId, int slot, int index) {
-        return gateway.sparseThumb(cameraId, slot, index);
+        return gateway.sparseThumb(scoped(cameraId), slot, index);
     }
 
     /**
@@ -126,7 +139,7 @@ public class SparseService {
                 tmp = Files.createTempFile("landmark-", ".jpg");
                 frame.transferTo(tmp);
             }
-            return gateway.sparseSetLandmarks(cameraId, landmarksJson, tmp, clear, admitFrame);
+            return gateway.sparseSetLandmarks(scoped(cameraId), landmarksJson, tmp, clear, admitFrame);
         } catch (IOException e) {
             throw new BusinessException(500, "暂存标定画面失败：" + e.getMessage());
         } finally {
@@ -141,16 +154,16 @@ public class SparseService {
     }
 
     public Map<String, Object> getLandmarks(String cameraId) {
-        return gateway.sparseGetLandmarks(cameraId);
+        return gateway.sparseGetLandmarks(scoped(cameraId));
     }
 
     public Map<String, Object> clearLandmarks(String cameraId) {
-        return gateway.sparseClearLandmarks(cameraId);
+        return gateway.sparseClearLandmarks(scoped(cameraId));
     }
 
     // ------------------------------------------------------------------ 模板库
     public Map<String, Object> listTemplates(String cameraId) {
-        return gateway.sparseListTemplates(cameraId);
+        return gateway.sparseListTemplates(scoped(cameraId));
     }
 
     /**
@@ -173,7 +186,7 @@ public class SparseService {
         try {
             tmp = Files.createTempFile("tpl-", ".jpg");
             frame.transferTo(tmp);
-            return gateway.sparseAddTemplate(cameraId, landmarkId, tmp, label, source,
+            return gateway.sparseAddTemplate(scoped(cameraId), landmarkId, tmp, label, source,
                     actor, verdictAtTime, force);
         } catch (IOException e) {
             throw new BusinessException(500, "暂存模板画面失败：" + e.getMessage());
@@ -189,10 +202,10 @@ public class SparseService {
     }
 
     public Map<String, Object> removeTemplate(String cameraId, String templateId, String actor) {
-        return gateway.sparseRemoveTemplate(cameraId, templateId, actor);
+        return gateway.sparseRemoveTemplate(scoped(cameraId), templateId, actor);
     }
 
     public byte[] templatePreview(String cameraId, String templateId) {
-        return gateway.sparseTemplatePreview(cameraId, templateId);
+        return gateway.sparseTemplatePreview(scoped(cameraId), templateId);
     }
 }

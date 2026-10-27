@@ -18,6 +18,12 @@ spring:
     time-zone: Asia/Shanghai
 
 app:
+  auth:
+    # 访问令牌。留空 = 不鉴权（fail-open，启动后首请求打一条 WARN）。
+    # 部署前必须配置：环境变量 APP_AUTH_TOKEN 可直接覆盖本值，优先级更高。
+    #   调用方携带 Authorization: Bearer <token> 或 X-API-Token: <token>，二者等价。
+    token: ${APP_AUTH_TOKEN:}
+
   algo:
     # 算法层地址。
     #   本地模式：http://127.0.0.1:8000
