@@ -1,0 +1,578 @@
+{
+  "mog2_area": {
+    "truePositive": 3,
+    "falseNegative": 17,
+    "falsePositive": 1,
+    "negatives": 25,
+    "precision": 0.75,
+    "recall": 0.15,
+    "f1": 0.25,
+    "seconds": 141.1,
+    "perSegment": [
+      {
+        "startMs": 15000,
+        "endMs": 20000,
+        "type": "moved",
+        "frames": 16,
+        "alarms": 10,
+        "detected": true,
+        "max": 0.419
+      },
+      {
+        "startMs": 22000,
+        "endMs": 23000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.228
+      },
+      {
+        "startMs": 25000,
+        "endMs": 26000,
+        "type": "moved",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.151
+      },
+      {
+        "startMs": 27000,
+        "endMs": 28000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.283
+      },
+      {
+        "startMs": 29000,
+        "endMs": 32000,
+        "type": "moved",
+        "frames": 10,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.223
+      },
+      {
+        "startMs": 37000,
+        "endMs": 38000,
+        "type": "moved",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.256
+      },
+      {
+        "startMs": 132000,
+        "endMs": 133000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.293
+      },
+      {
+        "startMs": 181000,
+        "endMs": 182000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.315
+      },
+      {
+        "startMs": 255000,
+        "endMs": 256000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.158
+      },
+      {
+        "startMs": 469000,
+        "endMs": 470000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.043
+      },
+      {
+        "startMs": 488000,
+        "endMs": 489000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 2,
+        "detected": true,
+        "max": 0.582
+      },
+      {
+        "startMs": 491000,
+        "endMs": 492000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 2,
+        "detected": true,
+        "max": 0.717
+      },
+      {
+        "startMs": 544000,
+        "endMs": 568000,
+        "type": "covered",
+        "frames": 73,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.31
+      },
+      {
+        "startMs": 572000,
+        "endMs": 576000,
+        "type": "covered",
+        "frames": 13,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.03
+      },
+      {
+        "startMs": 586000,
+        "endMs": 587000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.029
+      },
+      {
+        "startMs": 613000,
+        "endMs": 614000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.053
+      },
+      {
+        "startMs": 615000,
+        "endMs": 618000,
+        "type": "covered",
+        "frames": 10,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.1
+      },
+      {
+        "startMs": 660000,
+        "endMs": 675000,
+        "type": "covered",
+        "frames": 46,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.275
+      },
+      {
+        "startMs": 855000,
+        "endMs": 858000,
+        "type": "covered",
+        "frames": 10,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.039
+      },
+      {
+        "startMs": 860000,
+        "endMs": 869000,
+        "type": "covered",
+        "frames": 28,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.209
+      }
+    ]
+  },
+  "frame_area": {
+    "truePositive": 8,
+    "falseNegative": 12,
+    "falsePositive": 0,
+    "negatives": 25,
+    "precision": 1.0,
+    "recall": 0.4,
+    "f1": 0.571,
+    "seconds": 104.5,
+    "perSegment": [
+      {
+        "startMs": 15000,
+        "endMs": 20000,
+        "type": "moved",
+        "frames": 16,
+        "alarms": 7,
+        "detected": true,
+        "max": 0.734
+      },
+      {
+        "startMs": 22000,
+        "endMs": 23000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.159
+      },
+      {
+        "startMs": 25000,
+        "endMs": 26000,
+        "type": "moved",
+        "frames": 4,
+        "alarms": 1,
+        "detected": true,
+        "max": 0.404
+      },
+      {
+        "startMs": 27000,
+        "endMs": 28000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 1,
+        "detected": true,
+        "max": 0.42
+      },
+      {
+        "startMs": 29000,
+        "endMs": 32000,
+        "type": "moved",
+        "frames": 10,
+        "alarms": 3,
+        "detected": true,
+        "max": 0.467
+      },
+      {
+        "startMs": 37000,
+        "endMs": 38000,
+        "type": "moved",
+        "frames": 4,
+        "alarms": 2,
+        "detected": true,
+        "max": 0.505
+      },
+      {
+        "startMs": 132000,
+        "endMs": 133000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.313
+      },
+      {
+        "startMs": 181000,
+        "endMs": 182000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.08
+      },
+      {
+        "startMs": 255000,
+        "endMs": 256000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.092
+      },
+      {
+        "startMs": 469000,
+        "endMs": 470000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.031
+      },
+      {
+        "startMs": 488000,
+        "endMs": 489000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 1,
+        "detected": true,
+        "max": 0.459
+      },
+      {
+        "startMs": 491000,
+        "endMs": 492000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 2,
+        "detected": true,
+        "max": 0.58
+      },
+      {
+        "startMs": 544000,
+        "endMs": 568000,
+        "type": "covered",
+        "frames": 73,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.294
+      },
+      {
+        "startMs": 572000,
+        "endMs": 576000,
+        "type": "covered",
+        "frames": 13,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.15
+      },
+      {
+        "startMs": 586000,
+        "endMs": 587000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.045
+      },
+      {
+        "startMs": 613000,
+        "endMs": 614000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.079
+      },
+      {
+        "startMs": 615000,
+        "endMs": 618000,
+        "type": "covered",
+        "frames": 10,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.173
+      },
+      {
+        "startMs": 660000,
+        "endMs": 675000,
+        "type": "covered",
+        "frames": 46,
+        "alarms": 1,
+        "detected": true,
+        "max": 0.419
+      },
+      {
+        "startMs": 855000,
+        "endMs": 858000,
+        "type": "covered",
+        "frames": 10,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.089
+      },
+      {
+        "startMs": 860000,
+        "endMs": 869000,
+        "type": "covered",
+        "frames": 28,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.319
+      }
+    ]
+  },
+  "shortlong": {
+    "truePositive": 0,
+    "falseNegative": 20,
+    "falsePositive": 0,
+    "negatives": 25,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "seconds": 485.1,
+    "perSegment": [
+      {
+        "startMs": 15000,
+        "endMs": 20000,
+        "type": "moved",
+        "frames": 16,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.214
+      },
+      {
+        "startMs": 22000,
+        "endMs": 23000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.11
+      },
+      {
+        "startMs": 25000,
+        "endMs": 26000,
+        "type": "moved",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.054
+      },
+      {
+        "startMs": 27000,
+        "endMs": 28000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.059
+      },
+      {
+        "startMs": 29000,
+        "endMs": 32000,
+        "type": "moved",
+        "frames": 10,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.048
+      },
+      {
+        "startMs": 37000,
+        "endMs": 38000,
+        "type": "moved",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.469
+      },
+      {
+        "startMs": 132000,
+        "endMs": 133000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.025
+      },
+      {
+        "startMs": 181000,
+        "endMs": 182000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.365
+      },
+      {
+        "startMs": 255000,
+        "endMs": 256000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.113
+      },
+      {
+        "startMs": 469000,
+        "endMs": 470000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.0
+      },
+      {
+        "startMs": 488000,
+        "endMs": 489000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.1
+      },
+      {
+        "startMs": 491000,
+        "endMs": 492000,
+        "type": "defocused",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.284
+      },
+      {
+        "startMs": 544000,
+        "endMs": 568000,
+        "type": "covered",
+        "frames": 73,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.164
+      },
+      {
+        "startMs": 572000,
+        "endMs": 576000,
+        "type": "covered",
+        "frames": 13,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.215
+      },
+      {
+        "startMs": 586000,
+        "endMs": 587000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.006
+      },
+      {
+        "startMs": 613000,
+        "endMs": 614000,
+        "type": "covered",
+        "frames": 4,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.053
+      },
+      {
+        "startMs": 615000,
+        "endMs": 618000,
+        "type": "covered",
+        "frames": 10,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.087
+      },
+      {
+        "startMs": 660000,
+        "endMs": 675000,
+        "type": "covered",
+        "frames": 46,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.094
+      },
+      {
+        "startMs": 855000,
+        "endMs": 858000,
+        "type": "covered",
+        "frames": 10,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.021
+      },
+      {
+        "startMs": 860000,
+        "endMs": 869000,
+        "type": "covered",
+        "frames": 28,
+        "alarms": 0,
+        "detected": false,
+        "max": 0.217
+      }
+    ]
+  }
+}

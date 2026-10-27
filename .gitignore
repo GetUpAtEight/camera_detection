@@ -1,0 +1,46 @@
+# ---------------------------------------------------------------- 依赖与构建产物
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+node_modules/
+frontend/dist/
+frontend/.vite/
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# ---------------------------------------------------------------- 运行时数据（体积大 / 含本机信息）
+# H2 数据库与上传/告警图片
+backend/data/
+# 低频巡检的机位基线（按 cameraId 落盘，属于现场数据）
+algo/data/
+# 算法层临时缓存 / 测试产物
+algo/_tmp/
+algo/.tmp/
+algo/tests/_out/
+*.mv.db
+*.lock.db
+*.trace.db
+
+# ---------------------------------------------------------------- 私有配置与凭据
+deploy/.env.local
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# ---------------------------------------------------------------- 工具与编辑器
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------- 协作过程产物
+.agent-teams/
+.dsh-office*/
+dsh-acl-recovery/
+*.log

@@ -1,0 +1,197 @@
+{
+  "video": "samples/demo_video.mp4",
+  "streak": 2,
+  "learnFrames": 20,
+  "sensitivity": "balanced",
+  "jitter": 1.0,
+  "algorithms": [
+    "laplacian",
+    "entropy",
+    "scene_diff",
+    "orb",
+    "edge",
+    "mog2_area",
+    "frame_area",
+    "shortlong"
+  ],
+  "before": {
+    "label": "默认参数",
+    "frames": 130,
+    "normalAlarmRate": 0.0,
+    "blurAlarmRate": 0.975,
+    "coveredAlarmRate": 1.0,
+    "accuracy": 0.9923,
+    "fp": 0,
+    "fn": 1,
+    "perAlgoFireRate": {
+      "laplacian": {
+        "normal": 0.0,
+        "blur": 1.0,
+        "covered": 1.0
+      },
+      "entropy": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 0.425
+      },
+      "scene_diff": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 1.0
+      },
+      "orb": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 0.0
+      },
+      "edge": {
+        "normal": 0.42,
+        "blur": 1.0,
+        "covered": 1.0
+      },
+      "mog2_area": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 0.55
+      },
+      "frame_area": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 0.025
+      },
+      "shortlong": {
+        "normal": 0.0,
+        "blur": 0.025,
+        "covered": 0.4
+      }
+    }
+  },
+  "after": {
+    "label": "标定后",
+    "frames": 130,
+    "normalAlarmRate": 0.0,
+    "blurAlarmRate": 0.975,
+    "coveredAlarmRate": 1.0,
+    "accuracy": 0.9923,
+    "fp": 0,
+    "fn": 1,
+    "perAlgoFireRate": {
+      "laplacian": {
+        "normal": 0.0,
+        "blur": 1.0,
+        "covered": 1.0
+      },
+      "entropy": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 1.0
+      },
+      "scene_diff": {
+        "normal": 0.02,
+        "blur": 0.025,
+        "covered": 1.0
+      },
+      "orb": {
+        "normal": 0.0,
+        "blur": 0.725,
+        "covered": 0.0
+      },
+      "edge": {
+        "normal": 0.0,
+        "blur": 1.0,
+        "covered": 1.0
+      },
+      "mog2_area": {
+        "normal": 0.0,
+        "blur": 0.075,
+        "covered": 0.55
+      },
+      "frame_area": {
+        "normal": 0.0,
+        "blur": 0.025,
+        "covered": 0.025
+      },
+      "shortlong": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 0.375
+      }
+    }
+  },
+  "calibration": {
+    "laplacian": {
+      "field": "sharpness",
+      "base": 470.826,
+      "before": null,
+      "after": 376.661
+    },
+    "entropy": {
+      "field": "entropy",
+      "base": 5.923,
+      "before": null,
+      "after": 4.738
+    },
+    "scene_diff": {
+      "field": "sceneDiff",
+      "base": 13.104,
+      "before": null,
+      "after": 16.381
+    },
+    "orb": {
+      "field": "translation",
+      "base": 2.676,
+      "before": null,
+      "after": 3.346
+    },
+    "edge": {
+      "field": "deviation",
+      "base": 0.325,
+      "before": null,
+      "after": 0.406
+    },
+    "frame_area": {
+      "field": "largestBlobRatio",
+      "base": 0.012,
+      "before": null,
+      "after": 0.02
+    },
+    "mog2_area": {
+      "field": "foregroundRatio",
+      "base": 0.003,
+      "before": null,
+      "after": 0.02
+    },
+    "shortlong": {
+      "field": "dNorm",
+      "base": 0.288,
+      "before": null,
+      "after": 0.36
+    }
+  },
+  "params": {
+    "laplacian": {
+      "threshold": 376.661
+    },
+    "entropy": {
+      "threshold": 4.738
+    },
+    "scene_diff": {
+      "threshold": 16.381
+    },
+    "orb": {
+      "motion_pixels": 3.346
+    },
+    "edge": {
+      "threshold": 0.406
+    },
+    "frame_area": {
+      "area_ratio": 0.02
+    },
+    "mog2_area": {
+      "ratio": 0.02
+    },
+    "shortlong": {
+      "threshold": 0.36
+    }
+  }
+}

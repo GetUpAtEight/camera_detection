@@ -1,0 +1,139 @@
+{
+  "video": "samples/demo_video.mp4",
+  "streak": 2,
+  "learnFrames": 20,
+  "sensitivity": "balanced",
+  "algorithms": [
+    "laplacian",
+    "entropy",
+    "scene_diff",
+    "orb",
+    "edge",
+    "mog2_area",
+    "frame_area",
+    "shortlong"
+  ],
+  "before": {
+    "label": "默认参数",
+    "frames": 130,
+    "normalAlarmRate": 0.0,
+    "blurAlarmRate": 0.975,
+    "coveredAlarmRate": 1.0,
+    "accuracy": 0.9923,
+    "fp": 0,
+    "fn": 1,
+    "perAlgoFireRate": {
+      "laplacian": {
+        "normal": 0.0,
+        "blur": 1.0,
+        "covered": 1.0
+      },
+      "entropy": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 1.0
+      },
+      "scene_diff": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 1.0
+      },
+      "orb": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 0.0
+      },
+      "edge": {
+        "normal": 0.0,
+        "blur": 1.0,
+        "covered": 1.0
+      }
+    }
+  },
+  "after": {
+    "label": "标定后",
+    "frames": 130,
+    "normalAlarmRate": 0.0,
+    "blurAlarmRate": 0.975,
+    "coveredAlarmRate": 1.0,
+    "accuracy": 0.9923,
+    "fp": 0,
+    "fn": 1,
+    "perAlgoFireRate": {
+      "laplacian": {
+        "normal": 0.0,
+        "blur": 1.0,
+        "covered": 1.0
+      },
+      "entropy": {
+        "normal": 0.0,
+        "blur": 0.0,
+        "covered": 1.0
+      },
+      "scene_diff": {
+        "normal": 0.0,
+        "blur": 1.0,
+        "covered": 1.0
+      },
+      "orb": {
+        "normal": 0.0,
+        "blur": 0.775,
+        "covered": 0.0
+      },
+      "edge": {
+        "normal": 0.0,
+        "blur": 1.0,
+        "covered": 1.0
+      }
+    }
+  },
+  "calibration": {
+    "laplacian": {
+      "field": "sharpness",
+      "base": 1233.547,
+      "before": null,
+      "after": 800.0
+    },
+    "entropy": {
+      "field": "entropy",
+      "base": 4.845,
+      "before": null,
+      "after": 3.876
+    },
+    "scene_diff": {
+      "field": "sceneDiff",
+      "base": 2.116,
+      "before": null,
+      "after": 2.645
+    },
+    "orb": {
+      "field": "translation",
+      "base": 0.091,
+      "before": null,
+      "after": 2.0
+    },
+    "edge": {
+      "field": "deviation",
+      "base": 0.027,
+      "before": null,
+      "after": 0.05
+    }
+  },
+  "params": {
+    "laplacian": {
+      "threshold": 800.0
+    },
+    "entropy": {
+      "threshold": 3.876
+    },
+    "scene_diff": {
+      "threshold": 2.645
+    },
+    "orb": {
+      "motion_pixels": 2.0
+    },
+    "edge": {
+      "threshold": 0.05
+    }
+  }
+}

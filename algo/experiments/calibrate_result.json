@@ -1,0 +1,281 @@
+{
+  "video": "video1.mp4",
+  "fps": 30.0,
+  "sampledFrames": 2654,
+  "positiveFrames": 254,
+  "negativeFrames": 2400,
+  "algorithms": {
+    "laplacian": {
+      "field": "sharpness",
+      "direction": "lower",
+      "param": "threshold",
+      "negative": {
+        "50": 280.56,
+        "90": 388.795,
+        "95": 407.2785,
+        "99": 425.4219
+      },
+      "positive": {
+        "50": 262.13,
+        "95": 393.7905
+      },
+      "skipped": 30,
+      "samples": {
+        "neg": 2370,
+        "pos": 254
+      },
+      "presets": {
+        "conservative": {
+          "threshold": 100.829,
+          "recall": 0.0787
+        },
+        "balanced": {
+          "threshold": 122.4145,
+          "recall": 0.122
+        },
+        "sensitive": {
+          "threshold": 145.146,
+          "recall": 0.1772
+        }
+      }
+    },
+    "entropy": {
+      "field": "entropy",
+      "direction": "lower",
+      "param": "threshold",
+      "negative": {
+        "50": 7.3772,
+        "90": 7.5319,
+        "95": 7.5652,
+        "99": 7.6097
+      },
+      "positive": {
+        "50": 7.348,
+        "95": 7.6027
+      },
+      "skipped": 30,
+      "samples": {
+        "neg": 2370,
+        "pos": 254
+      },
+      "presets": {
+        "conservative": {
+          "threshold": 7.145,
+          "recall": 0.1102
+        },
+        "balanced": {
+          "threshold": 7.2065,
+          "recall": 0.1654
+        },
+        "sensitive": {
+          "threshold": 7.2419,
+          "recall": 0.2126
+        }
+      }
+    },
+    "scene_diff": {
+      "field": "sceneDiff",
+      "direction": "higher",
+      "param": "threshold",
+      "negative": {
+        "50": 69.682,
+        "90": 80.0458,
+        "95": 82.5256,
+        "99": 84.9029
+      },
+      "positive": {
+        "50": 65.1745,
+        "95": 78.3347
+      },
+      "skipped": 30,
+      "samples": {
+        "neg": 2370,
+        "pos": 254
+      },
+      "presets": {
+        "conservative": {
+          "threshold": 84.1363,
+          "recall": 0.0079
+        },
+        "balanced": {
+          "threshold": 82.5256,
+          "recall": 0.0079
+        },
+        "sensitive": {
+          "threshold": 80.0458,
+          "recall": 0.0354
+        }
+      }
+    },
+    "orb": {
+      "field": "translation",
+      "direction": "higher",
+      "param": "motion_pixels",
+      "negative": {
+        "50": 85.52,
+        "90": 284.678,
+        "95": 445.447,
+        "99": 1345.976
+      },
+      "positive": {
+        "50": 136.96,
+        "95": 843.8445
+      },
+      "skipped": 32,
+      "samples": {
+        "neg": 2370,
+        "pos": 252
+      },
+      "presets": {
+        "conservative": {
+          "threshold": 794.7244,
+          "recall": 0.0635
+        },
+        "balanced": {
+          "threshold": 445.447,
+          "recall": 0.2817
+        },
+        "sensitive": {
+          "threshold": 284.678,
+          "recall": 0.3373
+        }
+      }
+    },
+    "edge": {
+      "field": "deviation",
+      "direction": "higher",
+      "param": "threshold",
+      "negative": {
+        "50": 0.8214,
+        "90": 0.8592,
+        "95": 0.9125,
+        "99": 0.9233
+      },
+      "positive": {
+        "50": 0.8365,
+        "95": 0.904
+      },
+      "skipped": 30,
+      "samples": {
+        "neg": 2370,
+        "pos": 254
+      },
+      "presets": {
+        "conservative": {
+          "threshold": 0.918,
+          "recall": 0.0472
+        },
+        "balanced": {
+          "threshold": 0.9125,
+          "recall": 0.0472
+        },
+        "sensitive": {
+          "threshold": 0.8592,
+          "recall": 0.3228
+        }
+      }
+    },
+    "mog2_area": {
+      "field": "foregroundRatio",
+      "direction": "higher",
+      "param": "ratio",
+      "negative": {
+        "50": 0.0073,
+        "90": 0.0635,
+        "95": 0.1332,
+        "99": 0.3381
+      },
+      "positive": {
+        "50": 0.05,
+        "95": 0.2718
+      },
+      "skipped": 30,
+      "samples": {
+        "neg": 2370,
+        "pos": 254
+      },
+      "presets": {
+        "conservative": {
+          "threshold": 0.247,
+          "recall": 0.063
+        },
+        "balanced": {
+          "threshold": 0.1332,
+          "recall": 0.189
+        },
+        "sensitive": {
+          "threshold": 0.0635,
+          "recall": 0.4252
+        }
+      }
+    },
+    "frame_area": {
+      "field": "largestBlobRatio",
+      "direction": "higher",
+      "param": "area_ratio",
+      "negative": {
+        "50": 0.046,
+        "90": 0.0859,
+        "95": 0.0968,
+        "99": 0.1829
+      },
+      "positive": {
+        "50": 0.0731,
+        "95": 0.4243
+      },
+      "skipped": 30,
+      "samples": {
+        "neg": 2370,
+        "pos": 254
+      },
+      "presets": {
+        "conservative": {
+          "threshold": 0.1175,
+          "recall": 0.3346
+        },
+        "balanced": {
+          "threshold": 0.0968,
+          "recall": 0.3898
+        },
+        "sensitive": {
+          "threshold": 0.0859,
+          "recall": 0.4409
+        }
+      }
+    },
+    "shortlong": {
+      "field": "dNorm",
+      "direction": "higher",
+      "param": "threshold",
+      "negative": {
+        "50": 0.0377,
+        "90": 0.2052,
+        "95": 0.2865,
+        "99": 0.5124
+      },
+      "positive": {
+        "50": 0.0626,
+        "95": 0.2254
+      },
+      "skipped": 30,
+      "samples": {
+        "neg": 2370,
+        "pos": 254
+      },
+      "presets": {
+        "conservative": {
+          "threshold": 0.3767,
+          "recall": 0.0157
+        },
+        "balanced": {
+          "threshold": 0.2865,
+          "recall": 0.0433
+        },
+        "sensitive": {
+          "threshold": 0.2052,
+          "recall": 0.0827
+        }
+      }
+    }
+  }
+}
