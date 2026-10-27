@@ -54,3 +54,10 @@ _cp*.txt
 _mkcp.ps1
 _pathing.jar
 _safetest.py
+_bench.py
+_check.py
+_deploy*.py
+_inspect.py
+_rebuild.py
+_restart.py
+_rmbak.py

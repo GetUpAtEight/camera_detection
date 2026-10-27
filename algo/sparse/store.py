@@ -39,6 +39,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
+# 机位索引（cameras.json）的写盘节流间隔。
+# 每次抽样都全量重写是 O(机位数) 的 I/O；100 路规模下它比判定本身还贵。
+# 1 秒足以让列表页接近实时，同时把索引写盘次数从"每抽样一次"降到"每秒最多一次"。
+INDEX_FLUSH_MS = 1000
+
 # 基线库形状
 SLOT_COUNT = 24                 # 按小时的时段槽
 SLOT_CAPACITY = 8               # 每个槽最多保留多少样本（超出丢最旧）
@@ -418,6 +423,7 @@ class CameraStore:
         self._cache: Dict[str, CameraState] = {}
         self._index_path = os.path.join(self.root, "cameras.json")
         self._index: Dict[str, Dict[str, Any]] = self._load_index()
+        self._index_dirty_ms = 0.0
 
     # ------------------------------------------------------------------ 索引
     def _load_index(self) -> Dict[str, Dict[str, Any]]:
@@ -429,8 +435,25 @@ class CameraStore:
             return {}
 
     def _save_index(self) -> None:
-        with open(self._index_path, "w", encoding="utf-8") as fh:
+        # 原子写：多 worker / 多进程共享同一 data 目录时，
+        # 直接覆盖写会让并发读方读到半截 JSON（list_cameras 全崩）。
+        tmp = self._index_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
             json.dump(self._index, fh, ensure_ascii=False, indent=2)
+        os.replace(tmp, self._index_path)
+
+    def _maybe_flush_index(self, force: bool = False) -> None:
+        """索引写盘节流。
+
+        每次抽样都全量重写 cameras.json 是 O(机位数) 的 I/O，100 路规模下
+        单次抽样要为它付一次全文件序列化；这里改为至多每 INDEX_FLUSH_MS
+        落盘一次，进程退出/删除/重置时 force=True 立即落盘。
+        """
+        now = time.time()
+        if not force and (now - self._index_dirty_ms) < INDEX_FLUSH_MS / 1000.0:
+            return
+        self._save_index()
+        self._index_dirty_ms = now
 
     # ------------------------------------------------------------------ 文件
     def _json_path(self, camera_id: str) -> str:
@@ -495,34 +518,27 @@ class CameraStore:
     # ------------------------------------------------------------------ 写
     def save(self, state: CameraState) -> None:
         safe = self._safe_id(state.camera_id)
+
+        # ---- 锁外：压缩 NPZ（纯 CPU，最贵的一块） --------------------------
+        # 原实现把 np.savez_compressed 放在全局锁里，100 路并发时所有机位
+        # 排队等同一个压缩动作。压缩只读 state、只写本机位独占的临时文件，
+        # 天然可以并行，故移出临界区。
+        arrays = self._collect_arrays(state)
+        npz_tmp = self._npz_path(safe) + ".tmp.npz"
+        if arrays:
+            np.savez_compressed(npz_tmp, **arrays)
+        else:
+            npz_tmp = None
+
+        # ---- 锁内：只做轻量的 json 落盘 + 索引更新 -------------------------
         with self._lock:
             tmp_json = self._json_path(safe) + ".tmp"
             with open(tmp_json, "w", encoding="utf-8") as fh:
                 json.dump(state.to_payload(), fh, ensure_ascii=False)
             os.replace(tmp_json, self._json_path(safe))
 
-            arrays: Dict[str, np.ndarray] = {}
-            for slot, items in state.slots.items():
-                for idx, sample in enumerate(items):
-                    if sample.thumb is not None:
-                        arrays[f"s{slot}_{idx}"] = cv2.resize(
-                            sample.thumb, THUMB_SIZE, interpolation=cv2.INTER_AREA
-                        ).astype(np.uint8)
-            # 参照物模板（梯度幅值，float32；体积很小，几十 KB 级）
-            for idx, patch in state.landmark_patches.items():
-                if patch is not None and patch.size:
-                    arrays[f"lm{idx}"] = patch.astype(np.float32)
-            # 模板库（多套外观模板）
-            for tid, patch in state.template_patches.items():
-                if patch is not None and patch.size:
-                    arrays["tpl_" + tid] = patch.astype(np.float32)
-            # 基线参考帧（整帧灰度，约 230 KB）：ORB 全局配准用
-            if state.ref_gray is not None and state.ref_gray.size:
-                arrays["ref"] = state.ref_gray.astype(np.uint8)
-            if arrays:
-                tmp_npz = self._npz_path(safe) + ".tmp.npz"
-                np.savez_compressed(tmp_npz, **arrays)
-                os.replace(tmp_npz, self._npz_path(safe))
+            if npz_tmp is not None:
+                os.replace(npz_tmp, self._npz_path(safe))
             else:
                 # 没有可写的数组时 NPZ 不会被重建，旧文件的缩略图/参照帧会残留在磁盘上，
                 # 下次 get() 时被 _restore_thumbs 读回已不存在的样本 —— 状态与磁盘不一致。
@@ -536,8 +552,31 @@ class CameraStore:
                 "samples": state.total_samples(),
                 "status": state.baseline_status(),
             }
-            self._save_index()
+            self._maybe_flush_index()
             self._cache[safe] = state
+
+    @staticmethod
+    def _collect_arrays(state: CameraState) -> Dict[str, np.ndarray]:
+        """把机位态里需要落盘的数组抽成 NPZ 条目（纯函数，不碰索引与锁）。"""
+        arrays: Dict[str, np.ndarray] = {}
+        for slot, items in state.slots.items():
+            for idx, sample in enumerate(items):
+                if sample.thumb is not None:
+                    arrays[f"s{slot}_{idx}"] = cv2.resize(
+                        sample.thumb, THUMB_SIZE, interpolation=cv2.INTER_AREA
+                    ).astype(np.uint8)
+        # 参照物模板（梯度幅值，float32；体积很小，几十 KB 级）
+        for idx, patch in state.landmark_patches.items():
+            if patch is not None and patch.size:
+                arrays[f"lm{idx}"] = patch.astype(np.float32)
+        # 模板库（多套外观模板）
+        for tid, patch in state.template_patches.items():
+            if patch is not None and patch.size:
+                arrays["tpl_" + tid] = patch.astype(np.float32)
+        # 基线参考帧（整帧灰度，约 230 KB）：ORB 全局配准用
+        if state.ref_gray is not None and state.ref_gray.size:
+            arrays["ref"] = state.ref_gray.astype(np.uint8)
+        return arrays
 
     def _drop_npz(self, safe: str) -> None:
         """删除机位的 NPZ 二进制（缩略图 / 参照物模板 / 基线参考帧），忽略不存在的文件。"""
@@ -558,7 +597,7 @@ class CameraStore:
         with self._lock:
             self._cache.pop(safe, None)
             self._index.pop(safe, None)
-            self._save_index()
+            self._maybe_flush_index(force=True)
             removed = False
             for path in (self._json_path(safe), self._npz_path(safe)):
                 try:
