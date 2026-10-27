@@ -5,7 +5,7 @@
 #     bridge   SSH 隧道    http://127.0.0.1:18010    （--gpu 模式，算法层在服务器）
 #  2) backend  SpringBoot  http://127.0.0.1:8080
 #  3) frontend Vite dev    http://127.0.0.1:5173
-#  Usage: ./start_all.sh [--no-yolo] [--gpu]   |   Ctrl+C stops all three
+#  Usage: ./start_all.sh [--gpu]   |   Ctrl+C stops all three
 #         --gpu  登录 GPU 服务器、部署算法层并常驻隧道（要求后端 base-url 指向 18010）
 # ============================================================================
 set -euo pipefail
@@ -15,11 +15,9 @@ ALGO_DIR="$ROOT/algo"
 BACK_DIR="$ROOT/backend"
 FRONT_DIR="$ROOT/frontend"
 GPU_MODE=0
-YOLO_FLAG=""
 for arg in "$@"; do
   case "$arg" in
     --gpu|--remote) GPU_MODE=1 ;;
-    *) YOLO_FLAG="$arg" ;;
   esac
 done
 
@@ -61,7 +59,7 @@ else
     python3 -m venv "$ALGO_DIR/.venv"
     "$ALGO_DIR/.venv/bin/python" -m pip install -q -i https://pypi.org/simple -r "$ALGO_DIR/requirements.txt"
   fi
-  ( cd "$ALGO_DIR" && exec .venv/bin/python server.py --host 127.0.0.1 --port 8000 $YOLO_FLAG ) &
+  ( cd "$ALGO_DIR" && exec .venv/bin/python server.py --host 127.0.0.1 --port 8000 ) &
   PIDS+=($!)
   sleep 3
 fi

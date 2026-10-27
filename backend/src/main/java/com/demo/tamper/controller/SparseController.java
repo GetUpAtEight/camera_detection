@@ -78,9 +78,8 @@ public class SparseController {
     }
 
     @DeleteMapping("/state/{cameraId}")
-    public ApiResponse<Void> delete(@PathVariable String cameraId) {
-        sparseService.delete(cameraId);
-        return ApiResponse.ok();
+    public ApiResponse<Map<String, Object>> delete(@PathVariable String cameraId) {
+        return ApiResponse.ok(sparseService.delete(cameraId));
     }
 
     /** 基线库缩略图。 */

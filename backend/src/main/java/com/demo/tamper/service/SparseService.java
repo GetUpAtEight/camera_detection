@@ -15,13 +15,8 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * 低频稀疏采样（1 小时 / 1 天一次拉帧）的业务入口。
  *
- * <p>与实时监控（{@link LiveService}）的根本区别：
- *
- * <ul>
- *   <li>实时监控的帧间状态存在算法层<b>内存</b>里，会话结束就丢；
- *   <li>低频采样两次请求之间隔 1 小时，内存态必然过期，所以<b>机位状态由算法层按
- *       cameraId 落盘</b>（{@code algo/data/sparse/}），后端只做透传与校验。
- * </ul>
+ * <p>两次请求之间隔 1 小时，进程内状态必然过期，所以<b>机位状态由算法层按
+ * cameraId 落盘</b>（{@code algo/data/sparse/}），后端只做透传与校验。
  *
  * <p>后端不做业务计算，避免同一份判定逻辑在两个语言里各写一遍而逐渐漂移。
  */
@@ -101,8 +96,8 @@ public class SparseService {
         return gateway.sparseReset(cameraId);
     }
 
-    public void delete(String cameraId) {
-        gateway.sparseDelete(cameraId);
+    public Map<String, Object> delete(String cameraId) {
+        return gateway.sparseDelete(cameraId);
     }
 
     public byte[] thumb(String cameraId, int slot, int index) {

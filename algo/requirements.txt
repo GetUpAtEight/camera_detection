@@ -1,14 +1,9 @@
-# 算法层依赖（本地/CPU 环境）
-# GPU 服务器上额外需要：ultralytics>=8.4.178、torch==2.6.0（已存在于 /root/yzn_model_api/.venv）
+# 低频巡检算法层依赖（纯 CPU，无需 GPU / YOLO）
 fastapi>=0.115
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9
 opencv-python-headless>=4.9
 numpy>=1.26
 
-# 可选：启用 YOLO 深度学习检测时安装（同时需要模型文件 yolo26n.pt）
-# ultralytics>=8.4.178
-# torch==2.6.0
-
-# 可选：远程部署到 GPU 服务器（deploy/remote.py 用 SSH 桥接回本地）
+# 仅在需要「部署到 GPU 服务器 + SSH 隧道」时才用（deploy/remote.py）
 paramiko>=3.4

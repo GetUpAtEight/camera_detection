@@ -7,7 +7,7 @@ rem  Camera Tampering Detection - one-click start (Windows)
 rem    algo     FastAPI     http://127.0.0.1:8000
 rem    backend  SpringBoot  http://127.0.0.1:8080
 rem    frontend Vite dev    http://127.0.0.1:5173
-rem  Usage: double click, or:  start_all.bat [--no-yolo] [--gpu]
+rem  Usage: double click, or:  start_all.bat [--gpu]
 rem         --gpu  登录 GPU 服务器、部署算法层并常驻隧道（要求后端 base-url 指向 18010）
 rem ============================================================
 
@@ -15,11 +15,9 @@ cd /d "%~dp0"
 set "ALGO_DIR=%~dp0algo"
 set "BACK_DIR=%~dp0backend"
 set "FRONT_DIR=%~dp0frontend"
-set "YOLO_FLAG="
 set "GPU_MODE=0"
 if /I "%~1"=="--gpu" set "GPU_MODE=1"
 if /I "%~1"=="--remote" set "GPU_MODE=1"
-if /I "%~1"=="--no-yolo" set "YOLO_FLAG=--no-yolo"
 
 echo [1/3] algo layer ...
 if not exist "%ALGO_DIR%\.venv\Scripts\python.exe" goto :mkvenv
@@ -65,7 +63,7 @@ if errorlevel 1 (
   pause
   goto :fail
 )
-start "CTD-Algo-8000" /d "%ALGO_DIR%" cmd /k ".venv\Scripts\python.exe server.py --host 127.0.0.1 --port 8000 %YOLO_FLAG%"
+start "CTD-Algo-8000" /d "%ALGO_DIR%" cmd /k ".venv\Scripts\python.exe server.py --host 127.0.0.1 --port 8000"
 goto :startback
 
 :startgpu

@@ -35,10 +35,16 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(413, "上传文件超过大小限制"));
     }
 
+    /**
+     * 兜底异常。
+     *
+     * <p>**不回显异常原文**——异常消息可能带着文件路径、内部依赖版本之类的实现细节。
+     * 完整堆栈只写服务日志。
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleOther(Exception e, HttpServletRequest request) {
         log.error("接口异常 {} {}", request.getMethod(), request.getRequestURI(), e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.fail(500, "服务内部错误：" + e.getMessage()));
+                .body(ApiResponse.fail(500, "服务内部错误，请查看服务日志"));
     }
 }

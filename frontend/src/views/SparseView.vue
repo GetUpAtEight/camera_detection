@@ -1284,7 +1284,9 @@ async function submit(frames: Blob[], label?: string, reset = false) {
       reset,
       { ...params }
     )
-    result.value = res as SparseResult
+    // 接口层给出的是宽松结构（SparseSampleResult），这里按页面自用的
+    // SparseResult 视图消费；两侧字段有交集但不等价，故先过 unknown。
+    result.value = res as unknown as SparseResult
     if (advance.value === '0') simulatedTs.value = 0
     await loadState()
     if (res.alarm) {

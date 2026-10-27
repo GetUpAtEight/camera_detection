@@ -100,8 +100,8 @@ for m in ("fastapi", "uvicorn", "multipart", "cv2", "numpy", "torch", "ultralyti
     except Exception as e:
         print(f"  {{m:12s}} MISSING ({{type(e).__name__}})")
 PYEOF
-echo "--- 模型 ---"
-ls -lh {REMOTE_ROOT}/yolo26n.pt 2>&1 | tail -1
+echo "--- 低频巡检数据目录 ---"
+ls -lh {SERVICE_DIR}/algo/data/sparse 2>/dev/null | tail -5 || echo "  （尚无数据，首次抽样后生成）"
 """
 
 BRIDGE_BODY = r"""
@@ -233,7 +233,6 @@ cd "$SVC/algo" || exit 1
 export PYTHONPATH="$SVC/pylibs"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 setsid nohup "$PY" server.py --host 127.0.0.1 --port "$PORT" \
-    --model "$ROOT/yolo26n.pt" --batch 16 --max-wait-ms 2 \
     > "$SVC/service.log" 2>&1 &
 echo $! > "$SVC/ctd.pid"
 echo "  pid=$(cat "$SVC/ctd.pid")"
@@ -249,68 +248,58 @@ echo "PORT=$PORT" > "$SVC/port.txt"
 echo "  $(cat "$SVC/health.json")"
 """
 
-# 演示/自测：经典算法、YOLO 单张与拼批、区间视频检测
+# 演示/自测：低频巡检全链路（健康检查 → 参数字典 → 两次抽样 → 机位状态 → 清理）
 SELFTEST_SCRIPT = r"""
 SVC=__SVC__
 PY=__PY__
 PORT=$(cat "$SVC/port.txt" | cut -d= -f2)
 echo "port=$PORT"
-echo "--- YOLO 状态 ---"
-curl -s -m 10 "http://127.0.0.1:$PORT/health" | $PY -c "import sys,json;print(json.dumps(json.load(sys.stdin)['yolo'],ensure_ascii=False))"
 
-echo "--- 经典算法（遮挡图，带参考帧）---"
-curl -s -m 120 -X POST "http://127.0.0.1:$PORT/detect/image" \
-  -F "file=@$SVC/samples/target_covered.jpg" \
-  -F "reference=@$SVC/samples/reference_normal.jpg" \
-  -F 'algorithms=["entropy","scene_diff","edge","laplacian"]' \
-  -F "visual=false" > "$SVC/img.json"
+echo "--- 1) 健康检查 ---"
+curl -s -m 10 "http://127.0.0.1:$PORT/health" | $PY -c "import sys,json;d=json.load(sys.stdin);print('  version=%s service=%s cameras=%s cv2=%s' % (d.get('version'), d.get('service'), d.get('cameras'), d.get('cv2')))"
+
+echo "--- 2) 参数 / 判决字典 ---"
+curl -s -m 10 "http://127.0.0.1:$PORT/sparse/meta" | $PY -c "import sys,json;d=json.load(sys.stdin);print('  params=%d verdicts=%d' % (len(d.get('params') or []), len(d.get('verdicts') or [])))"
+
+echo "--- 3) 生成测试帧 ---"
 $PY - <<'PYEOF'
-import json
-d = json.load(open("/root/yzn_model_api/ctd_service/img.json"))
-for r in d.get("results", []):
-    print("  %-10s score=%.3f tampered=%-5s type=%s" % (
-        r["algorithm"], r["score"], r["isTampered"], r.get("tamperType")))
+import cv2, numpy as np, os
+out = "/tmp/ctd_selftest"
+os.makedirs(out, exist_ok=True)
+h, w = 480, 640
+img = np.full((h, w, 3), 60, np.uint8)
+cv2.rectangle(img, (40, 60), (300, 320), (200, 180, 120), -1)
+cv2.rectangle(img, (380, 120), (600, 260), (120, 200, 180), -1)
+for i in range(6):
+    cv2.line(img, (0, 80 * i), (w, 80 * i + 40), (90, 90, 90), 2)
+for k in range(6):
+    rng = np.random.default_rng(100 + k)
+    n = np.clip(img.astype(np.float32) + rng.normal(0, 2.5, img.shape), 0, 255).astype(np.uint8)
+    cv2.imwrite(os.path.join(out, "f%d.jpg" % k), n, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+print("  frames ->", out)
 PYEOF
 
-echo "--- YOLO 单图（/predict）---"
-curl -s -m 180 -X POST "http://127.0.0.1:$PORT/predict" \
-  -F "file=@$SVC/samples/reference_normal.jpg" > "$SVC/yolo.json"
-$PY - <<'PYEOF'
-import json
-d = json.load(open("/root/yzn_model_api/ctd_service/yolo.json"))
-print("  skipped=%s note=%s objs=%s" % (d.get("skipped"), d.get("note"),
-      len((d.get("detail") or {}).get("objects") or [])))
-PYEOF
+echo "--- 4) 第 1 次抽样（期望 cold_start）---"
+curl -s -m 60 -X POST "http://127.0.0.1:$PORT/sparse/sample" \
+  -F "cameraId=selftest" -F "name=自检" -F "tsMs=1700000000000" \
+  -F "frames=@/tmp/ctd_selftest/f0.jpg" \
+  -F "frames=@/tmp/ctd_selftest/f1.jpg" \
+  -F "frames=@/tmp/ctd_selftest/f2.jpg" \
+  | $PY -c "import sys,json;d=json.load(sys.stdin);print('  verdict=%s label=%s total=%sms' % (d.get('verdict'), d.get('verdictLabel'), (d.get('timingsMs') or {}).get('total')))"
 
-echo "--- YOLO 拼批 8 路 ---"
-ARGS=""
-for i in 1 2 3 4 5 6 7 8; do ARGS="$ARGS -F files=@$SVC/samples/reference_normal.jpg"; done
-curl -s -m 180 -X POST "http://127.0.0.1:$PORT/predict_batch" $ARGS > "$SVC/yolo_batch.json"
-$PY - <<'PYEOF'
-import json
-d = json.load(open("/root/yzn_model_api/ctd_service/yolo_batch.json"))
-print("  count=%s totalMs=%s" % (len(d.get("results") or []), d.get("totalMs")))
-PYEOF
+echo "--- 5) 第 2 次抽样（1 小时后，期望 normal）---"
+curl -s -m 60 -X POST "http://127.0.0.1:$PORT/sparse/sample" \
+  -F "cameraId=selftest" -F "name=自检" -F "tsMs=1700003600000" \
+  -F "frames=@/tmp/ctd_selftest/f3.jpg" \
+  -F "frames=@/tmp/ctd_selftest/f4.jpg" \
+  -F "frames=@/tmp/ctd_selftest/f5.jpg" \
+  | $PY -c "import sys,json;d=json.load(sys.stdin);print('  verdict=%s label=%s dHist=%s' % (d.get('verdict'), d.get('verdictLabel'), ((d.get('layers') or {}).get('L0') or {}).get('dHist')))"
 
-echo "--- 视频区间检测（2.0s-3.4s 失焦段）---"
-curl -s -m 300 -X POST "http://127.0.0.1:$PORT/detect/video" \
-  -F "file=@$SVC/samples/demo_video.mp4" \
-  -F 'algorithms=["laplacian","entropy","scene_diff","orb","edge"]' \
-  -F "sampleFps=5" -F "maxFrames=120" -F "visual=false" \
-  -F "startMs=2000" -F "endMs=3400" > "$SVC/vid.json"
-TID=$($PY -c "import json;print(json.load(open('/root/yzn_model_api/ctd_service/vid.json'))['taskId'])")
-for i in $(seq 1 60); do
-  ST=$(curl -s -m 5 "http://127.0.0.1:$PORT/detect/tasks/$TID?includeFrames=false" \
-       | $PY -c "import sys,json;d=json.load(sys.stdin);print(d.get('status'),d.get('processedFrames'),d.get('totalFrames'))")
-  case "$ST" in done*|DONE*|failed*|FAILED*) break;; esac
-  sleep 2
-done
-echo "  结果: $ST"
-curl -s -m 10 "http://127.0.0.1:$PORT/detect/tasks/$TID?includeFrames=false" | $PY -c "
-import sys,json;d=json.load(sys.stdin)
-print('  window:',d.get('startMs'),'->',d.get('endMs'),'expect:',d.get('totalFrames'))
-print('  timings:',json.dumps(d.get('timings'),ensure_ascii=False))
-"
+echo "--- 6) 机位状态 ---"
+curl -s -m 10 "http://127.0.0.1:$PORT/sparse/state/selftest" | $PY -c "import sys,json;d=json.load(sys.stdin);print('  status=%s samples=%s slots=%d' % (d.get('status'), d.get('samples'), len(d.get('slots') or [])))"
+
+echo "--- 7) 清理自检机位 ---"
+curl -s -m 10 -X DELETE "http://127.0.0.1:$PORT/sparse/state/selftest" | $PY -c "import sys,json;print('  deleted=%s' % json.load(sys.stdin).get('deleted'))"
 """.replace("__SVC__", SERVICE_DIR).replace("__PY__", PY)
 
 RESTART_SCRIPT = rf"""
@@ -322,7 +311,6 @@ PORT=${{PORT:-8010}}
 export PYTHONPATH="$SVC/pylibs"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 setsid nohup "$PY" server.py --host 127.0.0.1 --port "$PORT" \
-    --model "{REMOTE_ROOT}/yolo26n.pt" --batch 16 --max-wait-ms 2 \
     >> "$SVC/service.log" 2>&1 &
 echo $! > "$SVC/ctd.pid"
 for i in $(seq 1 30); do
